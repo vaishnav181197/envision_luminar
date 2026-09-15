@@ -1,0 +1,87 @@
+# ELEVATE Project Rules
+
+You are working on ELEVATE, a Student UI Design Competition platform. Follow these rules strictly.
+
+## Architecture
+
+- Use Next.js App Router with TypeScript strict mode
+- Default to Server Components; add "use client" only when needed
+- All Supabase access goes through `src/lib/supabase/` utilities
+- Never import `@supabase/supabase-js` directly in components
+- Run the dev server on port 3010
+
+## Design System (Non-Negotiable)
+
+- **NEVER create ad-hoc UI** — use components from `@/components/ui`
+- **New components MUST be added to `/design-system` page first** before use elsewhere
+- **NEVER use arbitrary colors** — use semantic tokens: `primary-*`, `text-primary`, `bg-surface`, `border-border`
+- **NEVER use arbitrary spacing** — follow the 4px grid via Tailwind utilities
+- **Match existing patterns** for shadows (`shadow-xs` through `shadow-xl`), radius (`rounded-lg`, `rounded-xl`), and transitions (200ms)
+- Read `design.md` before making visual changes
+- Read `context.md` before making architectural changes
+
+## Component Rules
+
+- Import UI from `@/components/ui` barrel export
+- Use `cn()` from `@/lib/utils/cn` for conditional classes
+- Use `lucide-react` for icons (already tree-shaken via next.config)
+- Use `next/image` for all images with proper `sizes` attribute
+- Upvote interactions MUST use `UpvoteButton` component
+- Project displays MUST use `ProjectCard` component
+
+## Performance
+
+- Do NOT add unnecessary dependencies
+- Prefer native HTML elements (`<dialog>`, `<details>`) over libraries
+- Use dynamic imports for heavy client components
+- Keep client component boundaries as small as possible
+- Optimize images: AVIF/WebP, lazy loading, responsive sizes
+
+## File Organization
+
+```
+New UI component  → src/components/ui/[name].tsx + export in index.ts + showcase in design-system
+New page          → src/app/[route]/page.tsx
+New API route     → src/app/api/[route]/route.ts
+New type          → src/types/
+New constant      → src/lib/constants/
+New utility       → src/lib/utils/
+```
+
+## Naming Conventions
+
+- Components: PascalCase files and exports
+- Hooks: `use` prefix, camelCase
+- Types: PascalCase interfaces
+- CSS variables: kebab-case with semantic names
+
+## Code Quality
+
+- Run `npm run lint` and `npm run typecheck` before completing tasks
+- Format with Prettier (tailwind plugin sorts classes)
+- No `any` types unless absolutely necessary with comment
+- Form inputs must have labels and error states
+
+## What NOT To Do
+
+- ❌ Duplicate UI patterns instead of extending design system
+- ❌ Inline styles or CSS modules (use Tailwind)
+- ❌ Hardcode colors like `#6a1b9a` (use `primary-*` tokens)
+- ❌ Skip accessibility (labels, aria attributes, focus rings)
+- ❌ Build backend logic without RLS policies
+- ❌ Commit `.env` files or secrets
+- ❌ Add UI libraries (Radix, MUI, Chakra, shadcn CLI additions without design system integration)
+
+## Documentation
+
+When making significant changes, update:
+- `context.md` — architecture changes
+- `design.md` — visual/token changes
+- `project-requirements.md` — business logic changes
+
+## Voting Domain Rules (Phase 2+)
+
+- Enforce one vote per user at database level (`UNIQUE(user_id)`)
+- Validate deadline server-side on all write operations
+- Vote changes must be atomic (delete old + insert new in transaction)
+- Use optimistic UI with rollback on API failure
