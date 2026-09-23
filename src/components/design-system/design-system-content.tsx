@@ -29,6 +29,7 @@ import {
   Dialog,
   Drawer,
   EmptyState,
+  ImageUpload,
   Input,
   Modal,
   Pagination,
@@ -63,11 +64,14 @@ import { LEADERBOARD_DATA, MOCK_PROJECTS } from "@/lib/constants/mock-projects";
 import { buildLeaderboardRows } from "@/lib/constants/mock-admin";
 import { cn } from "@/lib/utils/cn";
 import {
+  AdminProjects,
+  AdminVoters,
   CompetitionStatusBanner,
   DeadlineSettingsForm,
   DeleteProjectDialog,
   LeaderboardTable,
 } from "@/components/admin";
+import type { EligibleStudent } from "@/types/admin";
 
 export function DesignSystemContent() {
   const { addToast } = useToast();
@@ -79,6 +83,19 @@ export function DesignSystemContent() {
   const [votedProject, setVotedProject] = useState<string | null>("1");
   const [selectedRole, setSelectedRole] = useState("student");
   const [deleteDemoOpen, setDeleteDemoOpen] = useState(false);
+  const [demoThumbnail, setDemoThumbnail] = useState<File | null>(null);
+  const [demoVoters, setDemoVoters] = useState<EligibleStudent[]>([
+    {
+      id: "v1",
+      email: "student.one@institute.edu",
+      createdAt: "2026-09-01T10:00:00.000Z",
+    },
+    {
+      id: "v2",
+      email: "student.two@institute.edu",
+      createdAt: "2026-09-02T10:00:00.000Z",
+    },
+  ]);
 
   const adminDemoRows = buildLeaderboardRows(MOCK_PROJECTS).slice(0, 4);
   const demoDeadline = "2026-08-15T23:59:00.000Z";
@@ -92,7 +109,7 @@ export function DesignSystemContent() {
           Living Style Guide
         </Badge>
         <h1 className="text-3xl font-bold tracking-tight text-text-primary sm:text-4xl">
-          ELEVATE Design System
+          Envision Design System
         </h1>
         <p className="mt-3 max-w-2xl text-base text-text-secondary">
           Production-ready components for the Student UI Design Competition platform.
@@ -282,6 +299,13 @@ export function DesignSystemContent() {
               label="Project Description"
               placeholder="Describe your design approach, tools used, and key features..."
               rows={4}
+            />
+          </ShowcaseBox>
+          <ShowcaseBox label="Image Upload" className="sm:col-span-2">
+            <ImageUpload
+              label="Thumbnail"
+              value={demoThumbnail}
+              onChange={setDemoThumbnail}
             />
           </ShowcaseBox>
           <ShowcaseBox label="Select">
@@ -567,7 +591,7 @@ export function DesignSystemContent() {
                 id: "rules",
                 title: "Competition Rules",
                 content:
-                  "Each student may submit one project and cast one vote. Voting closes on the deadline.",
+                  "Admins publish the competing UIs. Listed students enter with email plus a 6-digit code and cast one vote before the deadline.",
               },
               {
                 id: "judging",
@@ -592,7 +616,6 @@ export function DesignSystemContent() {
             <TableRow>
               <TableHead>Rank</TableHead>
               <TableHead>Project</TableHead>
-              <TableHead>Author</TableHead>
               <TableHead className="text-right">Votes</TableHead>
             </TableRow>
           </TableHeader>
@@ -605,7 +628,6 @@ export function DesignSystemContent() {
                   </Badge>
                 </TableCell>
                 <TableCell className="font-medium">{row.title}</TableCell>
-                <TableCell className="text-text-secondary">{row.author}</TableCell>
                 <TableCell className="text-right font-semibold tabular-nums">
                   {row.votes}
                 </TableCell>
@@ -662,8 +684,8 @@ export function DesignSystemContent() {
         <div className="mt-4">
           <EmptyState
             title="No projects yet"
-            description="Be the first to submit your UI design to the competition."
-            action={<Button leftIcon={<Plus className="h-4 w-4" />}>Submit Project</Button>}
+            description="Check back once the admin publishes competing UIs."
+            action={<Button leftIcon={<Plus className="h-4 w-4" />}>Enter voting</Button>}
           />
         </div>
       </Section>
@@ -672,7 +694,7 @@ export function DesignSystemContent() {
       <Section
         id="admin"
         title="Admin Components"
-        description="Dashboard components for managing submissions, deadlines, and competition status."
+        description="Dashboard components for managing projects, voters, deadlines, and competition status."
       >
         <ShowcaseBox label="Competition Status Banner">
           <div className="space-y-3">
@@ -734,6 +756,40 @@ export function DesignSystemContent() {
             onClose={() => setDeleteDemoOpen(false)}
             projectTitle="FinFlow Dashboard"
             onConfirm={() => setDeleteDemoOpen(false)}
+          />
+        </ShowcaseBox>
+
+        <ShowcaseBox label="Admin Projects" className="mt-4">
+          <AdminProjects
+            rows={adminDemoRows}
+            projects={MOCK_PROJECTS}
+            onStartEdit={() => undefined}
+            onCancelEdit={() => undefined}
+            onDelete={() => setDeleteDemoOpen(true)}
+            onCreate={async () => ({ success: true })}
+            onUpdate={async () => ({ success: true })}
+          />
+        </ShowcaseBox>
+
+        <ShowcaseBox label="Admin Voters" className="mt-4">
+          <AdminVoters
+            voters={demoVoters}
+            onAdd={async (email) => {
+              setDemoVoters((current) => [
+                {
+                  id: email,
+                  email,
+                  createdAt: "2026-09-22T00:00:00.000Z",
+                },
+                ...current,
+              ]);
+              return { success: true };
+            }}
+            onImport={async () => ({ success: true, imported: 0, found: 0 })}
+            onDelete={async (id) => {
+              setDemoVoters((current) => current.filter((voter) => voter.id !== id));
+              return { success: true };
+            }}
           />
         </ShowcaseBox>
       </Section>

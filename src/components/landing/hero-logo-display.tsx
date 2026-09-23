@@ -17,7 +17,7 @@ export function HeroLogoDisplay() {
         <div className="relative aspect-square w-full">
           <Image
             src={LOGO_SRC}
-            alt="ELEVATE"
+            alt="Envision"
             fill
             priority
             unoptimized

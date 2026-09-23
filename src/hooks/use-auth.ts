@@ -21,8 +21,25 @@ export function useAuth() {
         setUser(null);
         return;
       }
-      const data = (await res.json()) as { user: AuthUser };
-      setUser(data.user);
+      const data = (await res.json()) as {
+        user?: AuthUser;
+        voter?: { id: string; email: string; role: "student" };
+      };
+      if (data.user) {
+        setUser(data.user);
+        return;
+      }
+      if (data.voter) {
+        setUser({
+          id: data.voter.id,
+          email: data.voter.email,
+          name: data.voter.email,
+          role: "student",
+          batch: null,
+        });
+        return;
+      }
+      setUser(null);
     } catch {
       setUser(null);
     } finally {
@@ -31,8 +48,52 @@ export function useAuth() {
   }, []);
 
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    let cancelled = false;
+
+    async function load() {
+      try {
+        const res = await fetch("/api/me");
+        if (cancelled) return;
+        if (!res.ok) {
+          setUser(null);
+          return;
+        }
+        const data = (await res.json()) as {
+          user?: AuthUser;
+          voter?: { id: string; email: string; role: "student" };
+        };
+        if (cancelled) return;
+        if (data.user) {
+          setUser(data.user);
+          return;
+        }
+        if (data.voter) {
+          setUser({
+            id: data.voter.id,
+            email: data.voter.email,
+            name: data.voter.email,
+            role: "student",
+            batch: null,
+          });
+          return;
+        }
+        setUser(null);
+      } catch {
+        if (!cancelled) {
+          setUser(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return { user, loading, isAdmin: user?.role === "admin", refresh };
 }

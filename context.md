@@ -1,8 +1,8 @@
-# ELEVATE — Project Context
+# Envision — Project Context
 
 ## Philosophy
 
-ELEVATE is a **Student UI Design Competition Platform** built for institute students to submit UI designs, browse peer submissions, and cast exactly one vote per competition cycle. The platform prioritizes:
+Envision is a **Student UI Design Competition Platform**. Administrators publish the competing UIs and run the contest. Students enter with a pre-registered admission email, verify a 6-digit OTP, browse the gallery, and cast exactly one changeable vote. The platform prioritizes:
 
 - **Performance first** — Fast page loads, minimal JavaScript, excellent Core Web Vitals
 - **Design consistency** — Every UI element follows the living design system
@@ -16,7 +16,10 @@ ELEVATE is a **Student UI Design Competition Platform** built for institute stud
 | Framework | Next.js 16 (App Router) |
 | Language | TypeScript (strict) |
 | Styling | Tailwind CSS v4 |
-| Database & Auth | Supabase (PostgreSQL, Auth, RLS) |
+| Database | Supabase PostgreSQL + RLS |
+| Admin auth | Supabase Auth (email/password) |
+| Student auth | Allowlist + hashed OTP + signed cookie |
+| Mailer | Resend (not Supabase Auth OTP); console fallback in development |
 | Icons | lucide-react (tree-shaken) |
 | Hosting | Vercel Hobby Tier |
 
@@ -26,10 +29,12 @@ ELEVATE is a **Student UI Design Competition Platform** built for institute stud
 src/
 ├── app/                    # Next.js App Router pages
 │   ├── design-system/      # Living style guide dashboard
-│   ├── gallery/            # Project gallery (mock data, synced via context)
-│   ├── admin/              # Admin dashboard (mock workflow)
+│   ├── gallery/            # Project gallery (student voting session)
+│   ├── admin/              # Admin dashboard (live APIs)
+│   ├── vote/               # Student email + OTP entry
+│   ├── login/              # Admin password sign-in
 │   ├── layout.tsx          # Root layout with providers
-│   ├── page.tsx            # Redirects to /design-system
+│   ├── page.tsx            # Redirects to /vote
 │   └── globals.css         # Design tokens + Tailwind theme
 ├── components/
 │   ├── ui/                 # Reusable design system components
@@ -37,15 +42,18 @@ src/
 │   ├── layout/             # Header, Sidebar, AppProviders
 │   └── design-system/      # Style guide showcase sections
 ├── contexts/
-│   └── competition-context.tsx  # Shared mock competition state
+│   └── competition-context.tsx  # Shared live competition state
 ├── hooks/
-│   └── use-admin-competition.ts # Admin hook (re-exports context)
+│   ├── use-auth.ts              # Admin session
+│   ├── use-admin-dashboard.ts   # Admin session + leaderboard APIs
+│   └── use-admin-competition.ts # Re-exports admin dashboard hook
 ├── lib/
 │   ├── supabase/           # Client, server, middleware utilities
+│   ├── auth/               # Admin + student session helpers
 │   ├── constants/          # Mock data, app constants
 │   └── utils/              # cn(), helpers
 ├── types/                  # TypeScript definitions
-└── middleware.ts           # Supabase session refresh
+└── middleware.ts           # Supabase admin session + student cookie
 ```
 
 ## Component Architecture
@@ -65,36 +73,44 @@ src/
 - **Overlay**: Modal, Dialog, Drawer, Popover, Tooltip
 - **Navigation**: Tabs, Accordion, Breadcrumbs, Pagination, Sidebar, Header
 - **Domain**: ProjectCard, UpvoteButton (voting-specific)
-- **Admin**: LeaderboardTable, DeadlineSettingsForm, DeleteProjectDialog, AdminLayout, CompetitionStatusBanner
+- **Admin**: LeaderboardTable, DeadlineSettingsForm, DeleteProjectDialog, AdminLayout, CompetitionStatusBanner, project form, voter list
 
-## Admin Dashboard (Mock Phase)
+## Roles and sessions
 
-The admin UI at `/admin` uses mock data via `CompetitionProvider`:
+- **Admin** signs in at `/login` with email/password. Middleware and `GET /api/admin/session` guard `/admin`.
+- **Student** is not a Supabase Auth user. They complete `/vote` (email then OTP). The server sets a signed httpOnly voting cookie.
+- `/admin/login` redirects to `/login`.
+- `/register` is not part of the product.
 
-- **Overview** — stats row + top 3 leaderboard preview
-- **Submissions** — full leaderboard table with delete actions
-- **Settings** — deadline management with validation
+## Admin Dashboard
 
-State is shared with the gallery and header via `contexts/competition-context.tsx`. When an admin deletes a project or updates the deadline, the gallery and status indicator update immediately.
+The admin UI at `/admin` loads live data from admin APIs:
 
-**Backend handoff:** Replace context internals with Supabase/API calls; component interfaces stay unchanged.
+- **Overview** — stats row + top leaderboard preview, winner callout after the deadline
+- **Projects** — create, edit, and delete competing UIs (`POST/PUT/DELETE /api/projects`)
+- **Voters** — add one email, import Excel/CSV, list, and remove (`/api/admin/voters`)
+- **Settings** — deadline management (`GET/PUT /api/admin/settings`)
+
+After a project, voter, or deadline change, the dashboard refreshes the admin leaderboard and the shared `CompetitionProvider`.
+
+## Student voting
+
+1. `POST /api/auth/student/enter` — allowlist check, store hashed OTP, send email
+2. `POST /api/auth/student/verify` — check code, set voting cookie
+3. Gallery + `POST /api/votes` — one vote per `eligible_student_id`, change is atomic
+
+Do not use `supabase.auth.signInWithOtp`. Mailer uses `RESEND_API_KEY` (HTML + text OTP email). Without a key, development logs the code to the server console. Cookie signing uses `STUDENT_SESSION_SECRET`.
 
 ## Supabase Integration Strategy
 
 ### Client (`lib/supabase/client.ts`)
-Browser-side Supabase client for client components (auth forms, real-time voting).
+Browser-side Supabase client for admin auth forms.
 
 ### Server (`lib/supabase/server.ts`)
-Server-side client using Next.js cookies for Server Components and API routes.
+Server-side client using Next.js cookies for admin sessions and API routes.
 
 ### Middleware (`middleware.ts`)
-Refreshes auth sessions on every request. Matcher excludes static assets.
-
-### Phase 2 Implementation Plan
-1. Run SQL migrations for `profiles`, `projects`, `votes`, `settings` tables
-2. Configure Row Level Security policies
-3. Implement API routes for voting with one-vote constraint
-4. Connect gallery to live Supabase data
+Refreshes admin Auth sessions. Treats `/admin` as admin-only. Student gallery/vote APIs read the voting cookie, not `auth.users`.
 
 ## Performance Philosophy
 
@@ -140,6 +156,8 @@ npm run typecheck # TypeScript check
 
 **Phase 1 (Complete):** Frontend architecture, design system, mock gallery, Supabase utilities setup.
 
-**Phase 1.5 (Complete):** Admin dashboard UI with mock workflow (leaderboard, deadline, delete).
+**Phase 1.5 (Complete):** Admin dashboard UI (overview, delete, deadline).
 
-**Phase 2 (Next):** Backend voting logic, auth flows, RLS policies, live data wiring.
+**Phase 2 (Implemented):** Admin-owned projects, eligible voter list, student OTP entry, and vote-by-cookie. Live schema includes `003` (voters/OTP/votes), `004` (thumbnail bucket), and `005` (author/batch).
+
+Required env (Goal 3+): `RESEND_API_KEY`, optional `RESEND_FROM_EMAIL`, and `STUDENT_SESSION_SECRET` for the voting cookie. Without Resend, OTP codes log to the server console in development (`[otp:console] email → code`). Use `node scripts/ensure-otp-env.mjs` to seed missing secret/from values.

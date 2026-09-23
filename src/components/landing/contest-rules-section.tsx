@@ -1,20 +1,20 @@
-import { CheckCircle2, Clock, Trophy, Users, Vote } from "lucide-react";
+import { CheckCircle2, Clock, Mail, Trophy, Vote } from "lucide-react";
 
 const RULES = [
   {
-    icon: Users,
-    title: "Open to all students",
+    icon: Mail,
+    title: "Registered emails only",
     description:
-      "Any enrolled institute student may participate by submitting one original UI design project.",
-  },
-  {
-    icon: Trophy,
-    title: "One submission per student",
-    description:
-      "Each participant may submit a single project with a title, description, demo link, and optional thumbnail.",
+      "Admins publish every competing UI and register the student emails that may vote.",
   },
   {
     icon: Vote,
+    title: "Email plus a 6-digit code",
+    description:
+      "Enter the email on the voter list, verify the one-time code sent to that inbox, then open the gallery.",
+  },
+  {
+    icon: Trophy,
     title: "One vote per student",
     description:
       "Cast exactly one vote for your favorite design. You may change your vote before the deadline.",
@@ -23,7 +23,7 @@ const RULES = [
     icon: Clock,
     title: "Deadline enforced",
     description:
-      "Submissions and voting close at the competition deadline. No entries or votes are accepted after that time.",
+      "Voting and student entry close at the competition deadline. No codes or votes are accepted after that time.",
   },
   {
     icon: CheckCircle2,
@@ -45,8 +45,7 @@ export function ContestRulesSection() {
             Contest Rules
           </h2>
           <p className="mt-4 text-base text-white/60">
-            Fair, simple, and designed to celebrate the best student UI work. Read
-            the rules before you sign up.
+            Fair, simple, and designed to celebrate the best student UI work.
           </p>
         </div>
 

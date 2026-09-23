@@ -1,6 +1,7 @@
 import { AlertTriangle, Info } from "lucide-react";
 
 import { Alert } from "@/components/ui/alert";
+import { formatDateTime } from "@/lib/utils/format-date";
 
 export interface CompetitionStatusBannerProps {
   isOpen: boolean;
@@ -13,10 +14,7 @@ export function CompetitionStatusBanner({
   isDeadlineNear,
   deadline,
 }: CompetitionStatusBannerProps) {
-  const formattedDeadline = new Date(deadline).toLocaleString(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
+  const formattedDeadline = formatDateTime(deadline);
 
   if (!isOpen) {
     return (

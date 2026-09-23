@@ -4,9 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutGrid,
-  Palette,
   Shield,
-  Trophy,
+  Vote,
   Menu,
   X,
   Sparkles,
@@ -14,14 +13,12 @@ import {
 import { useState } from "react";
 
 import { useCompetition } from "@/contexts/competition-context";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StatusIndicator } from "@/components/ui/status-indicator";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils/cn";
 
 const navItems = [
-  { href: "/design-system", label: "Design System", icon: Palette },
   { href: "/gallery", label: "Project Gallery", icon: LayoutGrid },
   { href: "/admin", label: "Admin", icon: Shield, adminOnly: true },
 ];
@@ -30,7 +27,7 @@ export function Header() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const { isOpen } = useCompetition();
-  const { isAdmin } = useAuth();
+  const { user, isAdmin } = useAuth();
   const isAdminRoute = pathname.startsWith("/admin");
 
   const visibleNavItems = navItems.filter((item) => !item.adminOnly || isAdmin);
@@ -44,7 +41,7 @@ export function Header() {
               <Sparkles className="h-4 w-4 text-white" />
             </div>
             <span className="text-base font-bold tracking-tight text-text-primary">
-              ELEVATE
+              Envision
             </span>
           </Link>
 
@@ -64,11 +61,6 @@ export function Header() {
                 >
                   <item.icon className="h-4 w-4" />
                   {item.label}
-                  {item.href === "/admin" && isAdminRoute && (
-                    <Badge variant="primary" className="ml-0.5 px-1.5 py-0 text-[10px]">
-                      Admin
-                    </Badge>
-                  )}
                 </Link>
               );
             })}
@@ -81,10 +73,15 @@ export function Header() {
             label={isOpen ? "Voting Open" : "Voting Closed"}
             className="hidden sm:inline-flex"
           />
-          <Button variant="primary" size="sm" className="hidden sm:inline-flex">
-            <Trophy className="h-3.5 w-3.5" />
-            Submit Project
-          </Button>
+          {!isAdmin && !isAdminRoute && !user && (
+            <Link
+              href="/vote"
+              className="hidden h-8 items-center gap-1.5 rounded-md bg-primary-600 px-3 text-sm font-medium text-text-inverse shadow-sm transition-colors hover:bg-primary-700 sm:inline-flex"
+            >
+              <Vote className="h-3.5 w-3.5" />
+              Enter voting
+            </Link>
+          )}
           <Button
             variant="ghost"
             size="icon"

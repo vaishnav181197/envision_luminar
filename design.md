@@ -1,8 +1,8 @@
-# ELEVATE — Design Language
+# Envision — Design Language
 
 ## Design Philosophy
 
-ELEVATE's visual language is **premium, modern, and creator-focused**. Inspired by design platforms like Dribbble, Linear, and Vercel — with a distinctive purple brand identity refined from `#6a1b9a`.
+Envision's visual language is **premium, modern, and creator-focused**. Inspired by design platforms like Dribbble, Linear, and Vercel — with a distinctive purple brand identity refined from `#6a1b9a`.
 
 Core principles:
 - **Content-first** — UI designs are the hero; chrome stays minimal

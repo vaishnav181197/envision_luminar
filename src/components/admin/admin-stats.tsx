@@ -25,9 +25,9 @@ export function AdminStatsRow({ stats, loading, className }: AdminStatsProps) {
   return (
     <div className={cn("grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4", className)}>
       <StatCard
-        label="Submissions"
+        label="Projects"
         value={stats.totalSubmissions}
-        change="Total projects entered"
+        change="Published competing UIs"
         icon={<LayoutGrid className="h-4 w-4" />}
       />
       <StatCard
@@ -38,7 +38,7 @@ export function AdminStatsRow({ stats, loading, className }: AdminStatsProps) {
         icon={<BarChart3 className="h-4 w-4" />}
       />
       <StatCard
-        label="Current Leader"
+        label={stats.isOpen ? "Current Leader" : "Winner"}
         value={stats.leadingVotes}
         change={stats.leadingProject}
         trend="up"

@@ -36,6 +36,18 @@ export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextArea
   hint?: string;
 }
 
+export interface ImageUploadProps {
+  id?: string;
+  label?: string;
+  hint?: string;
+  error?: string;
+  required?: boolean;
+  disabled?: boolean;
+  value?: File | null;
+  previewUrl?: string | null;
+  onChange: (file: File | null) => void;
+}
+
 export type AlertVariant = "info" | "success" | "warning" | "error";
 
 export type BadgeVariant =

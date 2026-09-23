@@ -2,11 +2,12 @@ export type { Database, UserRole } from "./database";
 
 export interface Project {
   id: string;
+  createdBy?: string;
   title: string;
   description: string;
   demoUrl: string;
   thumbnailUrl?: string;
-  author: {
+  author?: {
     name: string;
     batch?: string;
     email?: string;
@@ -30,5 +31,6 @@ export type {
   AdminTab,
   AdminUser,
   CompetitionSettings,
+  EligibleStudent,
   LeaderboardRow,
 } from "./admin";

@@ -1,24 +1,35 @@
 import { jsonError, jsonOk } from "@/lib/api/response";
-import {
-  getCompetitionSettings,
-  isCompetitionOpen,
-  requireAuth,
-} from "@/lib/auth/session";
-import { createClient } from "@/lib/supabase/server";
+import { requireStudentSession } from "@/lib/auth/student-session";
+import { requireCompetitionOpen } from "@/lib/auth/session";
+import { createServiceClient } from "@/lib/supabase/service";
 
 interface VoteBody {
   projectId?: string;
 }
 
+function mapVoteError(message: string): { error: string; status: number } {
+  const normalized = message.toLowerCase();
+  if (normalized.includes("unauthorized")) {
+    return { error: "Unauthorized", status: 401 };
+  }
+  if (normalized.includes("voting is closed")) {
+    return { error: "Voting is closed", status: 403 };
+  }
+  if (normalized.includes("project not found")) {
+    return { error: "Project not found", status: 404 };
+  }
+  return { error: message, status: 500 };
+}
+
 export async function POST(request: Request) {
-  const auth = await requireAuth();
-  if (auth.error) {
-    return jsonError(auth.error, 401);
+  const voter = await requireStudentSession();
+  if (voter.error) {
+    return jsonError(voter.error, 401);
   }
 
-  const settings = await getCompetitionSettings();
-  if (!settings || !isCompetitionOpen(settings.votingEndTime)) {
-    return jsonError("Voting is closed", 403);
+  const deadline = await requireCompetitionOpen("Voting is closed");
+  if (deadline.error) {
+    return jsonError(deadline.error, deadline.status);
   }
 
   let body: VoteBody;
@@ -33,9 +44,12 @@ export async function POST(request: Request) {
     return jsonError("projectId is required");
   }
 
-  const supabase = await createClient();
+  const service = createServiceClient();
+  if (!service) {
+    return jsonError("Server is not configured", 500);
+  }
 
-  const { data: project, error: projectError } = await supabase
+  const { data: project, error: projectError } = await service
     .from("projects")
     .select("id")
     .eq("id", projectId)
@@ -45,52 +59,39 @@ export async function POST(request: Request) {
     return jsonError("Project not found", 404);
   }
 
-  const { data: existingVote } = await supabase
-    .from("votes")
-    .select("id, project_id")
-    .eq("user_id", auth.user!.id)
-    .maybeSingle();
-
-  if (existingVote?.project_id === projectId) {
-    return jsonOk({ projectId, voted: true });
-  }
-
-  if (existingVote) {
-    const { error: deleteError } = await supabase
-      .from("votes")
-      .delete()
-      .eq("id", existingVote.id);
-
-    if (deleteError) {
-      return jsonError(deleteError.message, 500);
-    }
-  }
-
-  const { error: insertError } = await supabase.from("votes").insert({
-    user_id: auth.user!.id,
-    project_id: projectId,
+  const { error: rpcError } = await service.rpc("cast_vote", {
+    p_project_id: projectId,
+    p_eligible_student_id: voter.session.id,
   });
 
-  if (insertError) {
-    return jsonError(insertError.message, 500);
+  if (rpcError) {
+    const mapped = mapVoteError(rpcError.message);
+    return jsonError(mapped.error, mapped.status);
   }
 
   return jsonOk({ projectId, voted: true });
 }
 
 export async function DELETE() {
-  const auth = await requireAuth();
-  if (auth.error) {
-    return jsonError(auth.error, 401);
+  const voter = await requireStudentSession();
+  if (voter.error) {
+    return jsonError(voter.error, 401);
   }
 
-  const settings = await getCompetitionSettings();
-  if (!settings || !isCompetitionOpen(settings.votingEndTime)) {
-    return jsonError("Voting is closed", 403);
+  const deadline = await requireCompetitionOpen("Voting is closed");
+  if (deadline.error) {
+    return jsonError(deadline.error, deadline.status);
   }
 
-  const supabase = await createClient();
-  const { error } = await supabase.from("votes").delete().eq("user_id", auth.user!.id);
+  const service = createServiceClient();
+  if (!service) {
+    return jsonError("Server is not configured", 500);
+  }
+
+  const { error } = await service
+    .from("votes")
+    .delete()
+    .eq("eligible_student_id", voter.session.id);
 
   if (error) {
     return jsonError(error.message, 500);

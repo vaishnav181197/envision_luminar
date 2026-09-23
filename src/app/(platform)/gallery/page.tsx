@@ -2,10 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Filter, Plus, Search, Trophy } from "lucide-react";
+import { Filter, Search, Trophy } from "lucide-react";
 
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
-import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { ProjectCard } from "@/components/ui/project-card";
@@ -29,10 +28,13 @@ export default function GalleryPage() {
   const [votingProjectId, setVotingProjectId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
+  const query = search.toLowerCase();
   const filteredProjects = projects.filter(
     (p) =>
-      p.title.toLowerCase().includes(search.toLowerCase()) ||
-      p.author.name.toLowerCase().includes(search.toLowerCase()),
+      p.title.toLowerCase().includes(query) ||
+      p.description.toLowerCase().includes(query) ||
+      (p.author?.name?.toLowerCase().includes(query) ?? false) ||
+      (p.author?.batch?.toLowerCase().includes(query) ?? false),
   );
 
   const leader = leaderboard[0];
@@ -52,7 +54,7 @@ export default function GalleryPage() {
 
     if (!result.success) {
       if (result.error === "Unauthorized") {
-        router.push("/login?redirect=/gallery");
+        router.push("/vote");
         return;
       }
       addToast({
@@ -79,18 +81,15 @@ export default function GalleryPage() {
             Project Gallery
           </h1>
           <p className="mt-2 max-w-xl text-base text-text-secondary">
-            Explore student UI design submissions and cast your vote for the most
+            Browse the published UI entries and cast one vote for the most
             creative and polished project.
           </p>
         </div>
-        <Button leftIcon={<Plus className="h-4 w-4" />} disabled={!isOpen}>
-          Submit Project
-        </Button>
       </div>
 
       <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard
-          label="Submissions"
+          label="Projects"
           value={stats.totalSubmissions}
           change={isOpen ? "Competition active" : "Competition closed"}
           icon={<Trophy className="h-4 w-4" />}
@@ -105,7 +104,7 @@ export default function GalleryPage() {
         <StatCard
           label="Leading Project"
           value={leader?.votes ?? 0}
-          change={leader?.title ?? "No submissions"}
+          change={leader?.title ?? "No projects yet"}
           trend="up"
         />
       </div>
@@ -148,7 +147,7 @@ export default function GalleryPage() {
       {filteredProjects.length === 0 && (
         <p className="mt-12 text-center text-sm text-text-muted">
           {projects.length === 0
-            ? "No submissions yet. Be the first to submit!"
+            ? "No projects yet. Check back once the admin publishes entries."
             : "No projects match your search."}
         </p>
       )}

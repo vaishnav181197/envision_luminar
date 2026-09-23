@@ -79,9 +79,12 @@ export function ProjectCard({
             <h3 className="truncate text-sm font-semibold text-text-primary">
               {project.title}
             </h3>
-            <p className="mt-0.5 truncate text-xs text-text-muted">
-              by {project.author.name}
-            </p>
+            {project.author?.name && (
+              <p className="mt-0.5 truncate text-xs text-text-muted">
+                {project.author.name}
+                {project.author.batch ? ` · Batch ${project.author.batch}` : ""}
+              </p>
+            )}
           </div>
           <UpvoteButton
             count={project.voteCount}

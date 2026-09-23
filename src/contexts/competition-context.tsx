@@ -38,7 +38,7 @@ interface CompetitionContextValue {
 const CompetitionContext = createContext<CompetitionContextValue | null>(null);
 
 const DEFAULT_SETTINGS: CompetitionSettings = {
-  votingEndTime: new Date().toISOString(),
+  votingEndTime: "2099-01-01T00:00:00.000Z",
 };
 
 export function CompetitionProvider({ children }: { children: ReactNode }) {
@@ -71,8 +71,41 @@ export function CompetitionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    let cancelled = false;
+
+    async function load() {
+      try {
+        const res = await fetch("/api/competition");
+        if (!res.ok) {
+          throw new Error("Failed to load competition data");
+        }
+
+        const data = (await res.json()) as {
+          projects: Project[];
+          settings: CompetitionSettings;
+          userVote: string | null;
+        };
+
+        if (cancelled) return;
+        setProjects(data.projects);
+        setSettings(data.settings);
+        setUserVote(data.userVote);
+      } catch {
+        if (!cancelled) {
+          setProjects([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const isOpen = isCompetitionOpen(settings.votingEndTime);
   const isDeadlineNear = isDeadlineApproaching(settings.votingEndTime);
@@ -239,8 +272,4 @@ export function useCompetition() {
     throw new Error("useCompetition must be used within CompetitionProvider");
   }
   return context;
-}
-
-export function useAdminCompetition() {
-  return useCompetition();
 }

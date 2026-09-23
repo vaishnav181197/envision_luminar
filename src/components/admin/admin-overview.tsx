@@ -1,4 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert } from "@/components/ui/alert";
 import { AdminStatsRow } from "@/components/admin/admin-stats";
 import { LeaderboardTable } from "@/components/admin/leaderboard-table";
 import type { AdminStats, LeaderboardRow } from "@/types/admin";
@@ -7,9 +8,21 @@ export interface AdminOverviewProps {
   stats: AdminStats;
   topRows: LeaderboardRow[];
   loading?: boolean;
+  isOpen?: boolean;
 }
 
-export function AdminOverview({ stats, topRows, loading }: AdminOverviewProps) {
+export function AdminOverview({
+  stats,
+  topRows,
+  loading,
+  isOpen = true,
+}: AdminOverviewProps) {
+  const winners = topRows.filter((row) => row.isWinner);
+  const winnerLabel =
+    winners.length > 1
+      ? winners.map((row) => row.title).join(", ")
+      : (winners[0]?.title ?? stats.leadingProject);
+
   return (
     <div className="space-y-6">
       <div>
@@ -17,9 +30,17 @@ export function AdminOverview({ stats, topRows, loading }: AdminOverviewProps) {
           Dashboard Overview
         </h1>
         <p className="mt-1 text-sm text-text-secondary">
-          Monitor submissions, track votes, and manage the competition at a glance.
+          Monitor published projects, track votes, and manage the competition at a glance.
         </p>
       </div>
+
+      {!loading && !isOpen && winners.length > 0 && (
+        <Alert variant="success" title="Winner declared">
+          {winners.length > 1
+            ? `Tied winners: ${winnerLabel}.`
+            : `${winnerLabel} is the current winner by vote count.`}
+        </Alert>
+      )}
 
       <AdminStatsRow stats={stats} loading={loading} />
 
@@ -27,7 +48,7 @@ export function AdminOverview({ stats, topRows, loading }: AdminOverviewProps) {
         <CardHeader className="border-b border-divider px-5 py-4">
           <CardTitle>Top Submissions</CardTitle>
           <CardDescription>
-            Leading projects by vote count. Full list available in Submissions.
+            Leading projects by vote count. Create and edit entries in Projects.
           </CardDescription>
         </CardHeader>
         <CardContent className="overflow-x-auto">

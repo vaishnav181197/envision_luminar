@@ -27,35 +27,35 @@ export default function LandingPage() {
             </h1>
 
             <p className="mt-6 max-w-lg text-lg leading-relaxed text-white/65">
-              Submit your finest UI work, explore peer creations, and cast your vote
-              in the institute&apos;s most ambitious design competition.
+              Explore the published UI entries and cast your vote in the
+              institute&apos;s most ambitious design competition.
             </p>
 
             <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
               <Link
-                href="/register"
+                href="/vote"
                 className="group inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-primary-600 px-8 text-base font-semibold text-white shadow-xl shadow-primary-600/40 transition-all hover:bg-primary-500 hover:shadow-primary-500/50"
               >
-                Sign up to participate
+                Enter voting
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
               </Link>
               <Link
                 href="/login"
                 className="inline-flex h-12 items-center justify-center rounded-xl border border-white/15 bg-white/5 px-8 text-base font-medium text-white/80 backdrop-blur-sm transition-all hover:border-white/25 hover:bg-white/10 hover:text-white"
               >
-                Sign in to your home
+                Admin sign in
               </Link>
             </div>
 
             <p className="mt-6 text-sm text-white/40">
-              Already registered?{" "}
+              Admin?{" "}
               <Link
                 href="/login"
                 className="text-amber-300/80 underline-offset-4 hover:text-amber-200 hover:underline"
               >
                 Sign in
               </Link>{" "}
-              to access your gallery and submissions.
+              to publish projects and manage voters.
             </p>
           </div>
 

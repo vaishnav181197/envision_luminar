@@ -1,4 +1,4 @@
-import type { LeaderboardRow } from "@/types/admin";
+import type { AdminStats, LeaderboardRow } from "@/types/admin";
 import type { Project } from "@/types";
 
 export function buildLeaderboardRows(projects: Project[]): LeaderboardRow[] {
@@ -8,13 +8,11 @@ export function buildLeaderboardRows(projects: Project[]): LeaderboardRow[] {
     id: project.id,
     rank: index + 1,
     title: project.title,
-    author: project.author.name,
-    authorEmail: project.author.email ?? "—",
-    batch: project.author.batch ?? "—",
     votes: project.voteCount,
     demoUrl: project.demoUrl,
     submittedAt: project.createdAt ?? new Date().toISOString(),
     thumbnailUrl: project.thumbnailUrl,
+    isWinner: project.isWinner === true,
   }));
 }
 
@@ -46,4 +44,37 @@ export function isDeadlineApproaching(
   const diff = new Date(votingEndTime).getTime() - Date.now();
   const thresholdMs = daysThreshold * 24 * 60 * 60 * 1000;
   return diff > 0 && diff <= thresholdMs;
+}
+
+export function markWinners(projects: Project[], isOpen: boolean): Project[] {
+  if (isOpen || projects.length === 0) {
+    return projects.map((project) => ({ ...project, isWinner: false }));
+  }
+
+  const maxVotes = Math.max(...projects.map((project) => project.voteCount));
+  if (maxVotes <= 0) {
+    return projects.map((project) => ({ ...project, isWinner: false }));
+  }
+
+  return projects.map((project) => ({
+    ...project,
+    isWinner: project.voteCount === maxVotes,
+  }));
+}
+
+export function buildAdminStats(
+  projects: Project[],
+  votingEndTime: string,
+): AdminStats {
+  const leaderboard = buildLeaderboardRows(projects);
+  const leader = leaderboard[0];
+
+  return {
+    totalSubmissions: projects.length,
+    totalVotes: projects.reduce((sum, project) => sum + project.voteCount, 0),
+    leadingProject: leader?.title ?? "—",
+    leadingVotes: leader?.votes ?? 0,
+    timeRemaining: formatTimeRemaining(votingEndTime),
+    isOpen: isCompetitionOpen(votingEndTime),
+  };
 }

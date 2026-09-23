@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusIndicator } from "@/components/ui/status-indicator";
 import { cn } from "@/lib/utils/cn";
+import { formatDateTime } from "@/lib/utils/format-date";
 
 export interface DeadlineSettingsFormProps {
   votingEndTime: string;
@@ -35,10 +36,7 @@ export function DeadlineSettingsForm({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const formattedCurrent = new Date(votingEndTime).toLocaleString(undefined, {
-    dateStyle: "full",
-    timeStyle: "short",
-  });
+  const formattedCurrent = formatDateTime(votingEndTime, "full");
 
   const handleSave = async () => {
     setSaving(true);
@@ -82,7 +80,7 @@ export function DeadlineSettingsForm({
           setSaved(false);
         }}
         error={error}
-        hint="Participants cannot submit or vote after this time."
+        hint="Students cannot enter or vote after this time."
         leftIcon={<Calendar className="h-4 w-4" />}
       />
 

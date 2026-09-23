@@ -33,60 +33,106 @@ export type Database = {
         };
         Relationships: [];
       };
+      eligible_students: {
+        Row: {
+          id: string;
+          email: string;
+          created_by: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          email: string;
+          created_by: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          email?: string;
+          created_by?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      otp_challenges: {
+        Row: {
+          id: string;
+          email: string;
+          code_hash: string;
+          expires_at: string;
+          attempts: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          email: string;
+          code_hash: string;
+          expires_at: string;
+          attempts?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          email?: string;
+          code_hash?: string;
+          expires_at?: string;
+          attempts?: number;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       projects: {
         Row: {
           id: string;
-          student_id: string;
+          created_by: string;
           title: string;
           description: string;
           demo_url: string;
           thumbnail_url: string | null;
+          author_name: string | null;
+          batch: string | null;
           created_at: string;
         };
         Insert: {
           id?: string;
-          student_id: string;
+          created_by: string;
           title: string;
           description: string;
           demo_url: string;
           thumbnail_url?: string | null;
+          author_name?: string | null;
+          batch?: string | null;
           created_at?: string;
         };
         Update: {
           id?: string;
-          student_id?: string;
+          created_by?: string;
           title?: string;
           description?: string;
           demo_url?: string;
           thumbnail_url?: string | null;
+          author_name?: string | null;
+          batch?: string | null;
           created_at?: string;
         };
-        Relationships: [
-          {
-            foreignKeyName: "projects_student_id_fkey";
-            columns: ["student_id"];
-            isOneToOne: true;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
-          },
-        ];
+        Relationships: [];
       };
       votes: {
         Row: {
           id: string;
-          user_id: string;
+          eligible_student_id: string;
           project_id: string;
           created_at: string;
         };
         Insert: {
           id?: string;
-          user_id: string;
+          eligible_student_id: string;
           project_id: string;
           created_at?: string;
         };
         Update: {
           id?: string;
-          user_id?: string;
+          eligible_student_id?: string;
           project_id?: string;
           created_at?: string;
         };
@@ -112,7 +158,13 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      cast_vote: {
+        Args: {
+          p_project_id: string;
+          p_eligible_student_id: string;
+        };
+        Returns: string;
+      };
     };
     Enums: {
       [_ in never]: never;

@@ -20,8 +20,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "ELEVATE — UI Design Competition",
-    template: "%s | ELEVATE",
+    default: "Envision — UI Design Competition",
+    template: "%s | Envision",
   },
   description:
     "A premium platform for student UI design competitions. Submit projects, browse the gallery, and vote for your favorites.",

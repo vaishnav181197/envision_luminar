@@ -1,11 +1,33 @@
+import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
+
 import { createServiceClient } from "@/lib/supabase/service";
 import type { UserRole } from "@/types/database";
 
+function emailFromCredentialsFile(): string | null {
+  try {
+    const filePath = path.join(process.cwd(), "admin-credentials.txt");
+    if (!existsSync(filePath)) {
+      return null;
+    }
+
+    const raw = readFileSync(filePath, "utf8");
+    const match = raw.match(/^email\s*=\s*(\S+)/im);
+    const email = match?.[1]?.trim().toLowerCase();
+    return email && email.includes("@") ? email : null;
+  } catch {
+    return null;
+  }
+}
+
 export function getAdminEmails(): string[] {
-  return (process.env.ADMIN_EMAILS ?? "")
+  const fromEnv = (process.env.ADMIN_EMAILS ?? "")
     .split(",")
     .map((email) => email.trim().toLowerCase())
     .filter(Boolean);
+  const fromFile = emailFromCredentialsFile();
+
+  return [...new Set([...fromEnv, ...(fromFile ? [fromFile] : [])])];
 }
 
 export function isAllowlistedAdminEmail(email: string): boolean {
@@ -13,7 +35,7 @@ export function isAllowlistedAdminEmail(email: string): boolean {
   return getAdminEmails().includes(normalized);
 }
 
-interface ProfileRoleRow {
+export interface ProfileRoleRow {
   id: string;
   email: string;
   role: UserRole;

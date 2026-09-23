@@ -1,13 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
 import {
+  FolderKanban,
   LayoutDashboard,
   LogOut,
+  Mail,
   Settings,
   Shield,
-  TableProperties,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +21,8 @@ import type { AdminTab } from "@/types/admin";
 
 const navItems: { id: AdminTab; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
-  { id: "submissions", label: "Submissions", icon: TableProperties },
+  { id: "projects", label: "Projects", icon: FolderKanban },
+  { id: "voters", label: "Voters", icon: Mail },
   { id: "settings", label: "Settings", icon: Settings },
 ];
 
@@ -29,13 +30,18 @@ export interface AdminLayoutProps {
   activeTab: AdminTab;
   onTabChange: (tab: AdminTab) => void;
   children: React.ReactNode;
+  user?: { name: string; email: string; role: "student" | "admin" } | null;
 }
 
-export function AdminLayout({ activeTab, onTabChange, children }: AdminLayoutProps) {
-  const pathname = usePathname();
-  const router = useRouter();
+export function AdminLayout({
+  activeTab,
+  onTabChange,
+  children,
+  user: sessionUser,
+}: AdminLayoutProps) {
   const { addToast } = useToast();
-  const { user } = useAuth();
+  const { user: authUser } = useAuth();
+  const user = sessionUser ?? authUser;
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -46,14 +52,13 @@ export function AdminLayout({ activeTab, onTabChange, children }: AdminLayoutPro
       variant: "success",
     });
 
-    router.push("/admin/login");
-    router.refresh();
+    window.location.assign("/login");
   };
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
       <div className="py-6">
-        <Breadcrumbs items={[{ label: "Admin Dashboard", href: pathname }]} />
+        <Breadcrumbs items={[{ label: "Admin Dashboard", href: "/admin" }]} />
       </div>
 
       <div className="flex flex-col gap-8 pb-12 lg:flex-row">

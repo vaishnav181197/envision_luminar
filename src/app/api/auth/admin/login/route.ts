@@ -1,6 +1,5 @@
 import { jsonError, jsonOk } from "@/lib/api/response";
-import { ensureAdminRole, isAllowlistedAdminEmail, toAdminSessionUser } from "@/lib/auth/admin";
-import { getProfile } from "@/lib/auth/session";
+import { authenticateWithPassword, defaultRedirectForRole } from "@/lib/auth/login";
 import { createClient } from "@/lib/supabase/server";
 
 interface AdminLoginBody {
@@ -24,32 +23,22 @@ export async function POST(request: Request) {
     return jsonError("Email and password are required");
   }
 
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-
-  if (error || !data.user) {
-    return jsonError(error?.message ?? "Invalid email or password", 401);
+  const result = await authenticateWithPassword(email, password);
+  if (!result.user) {
+    return jsonError(result.error, result.status);
   }
 
-  let profile = await getProfile(data.user.id);
-
-  if (profile?.role !== "admin" && isAllowlistedAdminEmail(email)) {
-    const promoted = await ensureAdminRole(data.user.id, email);
-    if (promoted) {
-      profile = { ...promoted, avatar_url: null };
-    }
-  }
-
-  if (profile?.role !== "admin") {
+  if (result.user.role !== "admin") {
+    const supabase = await createClient();
     await supabase.auth.signOut();
-    return jsonError("Access denied. This account does not have admin privileges.", 403);
+    return jsonError(
+      "Access denied. This account does not have admin privileges.",
+      403,
+    );
   }
 
   return jsonOk({
-    user: toAdminSessionUser(profile),
-    redirectTo: "/admin",
+    user: result.user,
+    redirectTo: defaultRedirectForRole("admin"),
   });
 }

@@ -7,6 +7,7 @@ export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 export { Checkbox } from "./checkbox";
 export { Drawer } from "./drawer";
 export { EmptyState, StatCard } from "./empty-state";
+export { ImageUpload } from "./image-upload";
 export { Input } from "./input";
 export { Modal, Dialog } from "./modal";
 export { Pagination } from "./pagination";

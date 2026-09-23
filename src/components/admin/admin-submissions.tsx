@@ -36,23 +36,23 @@ export function AdminSubmissions({ rows, loading, onDelete }: AdminSubmissionsPr
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-text-primary">
-          All Submissions
+          All Projects
         </h1>
         <p className="mt-1 text-sm text-text-secondary">
-          Review every project with student and batch details, sorted by vote count.
-          Delete inappropriate submissions.
+          Review every published UI, sorted by vote count. Delete entries from here
+          or manage them in Projects.
         </p>
       </div>
 
       {rows.length === 0 ? (
         <EmptyState
           icon={<Inbox className="h-5 w-5" />}
-          title="No submissions"
-          description="All projects have been removed. New submissions will appear here once students submit."
+          title="No projects"
+          description="All projects have been removed. New entries will appear here once an admin publishes them."
         />
       ) : (
         <>
-          <LeaderboardTable rows={paginatedRows} onDelete={onDelete} showBatch />
+          <LeaderboardTable rows={paginatedRows} onDelete={onDelete} />
           {totalPages > 1 && (
             <Pagination
               currentPage={page}

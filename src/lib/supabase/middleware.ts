@@ -8,7 +8,8 @@ function hasSupabaseEnv() {
   );
 }
 
-const ADMIN_LOGIN_PATH = "/admin/login";
+const LOGIN_PATH = "/login";
+const LEGACY_ADMIN_LOGIN_PATH = "/admin/login";
 
 export async function updateSession(request: NextRequest) {
   if (!hasSupabaseEnv()) {
@@ -43,12 +44,25 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const pathname = request.nextUrl.pathname;
-  const isAdminLogin = pathname === ADMIN_LOGIN_PATH;
-  const isAdminRoute = pathname.startsWith("/admin") && !isAdminLogin;
+  const isLegacyAdminLogin = pathname === LEGACY_ADMIN_LOGIN_PATH;
+  const isLogin = pathname === LOGIN_PATH;
+  const isAdminLoginApi = pathname === "/api/auth/admin/login";
+  const isAdminRoute = pathname.startsWith("/admin") && !isLegacyAdminLogin;
   const isAdminApi =
-    pathname.startsWith("/api/admin") || pathname.startsWith("/api/auth/admin");
+    (pathname.startsWith("/api/admin") ||
+      pathname.startsWith("/api/auth/admin")) &&
+    !isAdminLoginApi;
 
-  if (isAdminLogin && user) {
+  if (isLegacyAdminLogin) {
+    const url = request.nextUrl.clone();
+    url.pathname = LOGIN_PATH;
+    if (!url.searchParams.get("redirect")) {
+      url.searchParams.set("redirect", "/admin");
+    }
+    return NextResponse.redirect(url);
+  }
+
+  if (isLogin && user) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("role")
@@ -57,8 +71,8 @@ export async function updateSession(request: NextRequest) {
 
     if (profile?.role === "admin") {
       const url = request.nextUrl.clone();
-      url.pathname = "/admin";
       url.search = "";
+      url.pathname = "/admin";
       return NextResponse.redirect(url);
     }
   }
@@ -70,7 +84,7 @@ export async function updateSession(request: NextRequest) {
       }
 
       const url = request.nextUrl.clone();
-      url.pathname = ADMIN_LOGIN_PATH;
+      url.pathname = LOGIN_PATH;
       url.searchParams.set("redirect", pathname);
       return NextResponse.redirect(url);
     }

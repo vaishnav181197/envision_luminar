@@ -4,13 +4,19 @@ export interface LeaderboardRow {
   id: string;
   rank: number;
   title: string;
-  author: string;
-  authorEmail: string;
-  batch: string;
   votes: number;
   demoUrl: string;
   submittedAt: string;
   thumbnailUrl?: string;
+  isWinner?: boolean;
+}
+
+export type AdminTab = "overview" | "projects" | "voters" | "settings";
+
+export interface EligibleStudent {
+  id: string;
+  email: string;
+  createdAt: string;
 }
 
 export interface CompetitionSettings {
@@ -31,8 +37,6 @@ export interface AdminUser {
   email: string;
   role: "admin";
 }
-
-export type AdminTab = "overview" | "submissions" | "settings";
 
 export interface AdminProject extends Project {
   authorEmail?: string;

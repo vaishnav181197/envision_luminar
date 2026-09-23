@@ -56,6 +56,26 @@ export async function getCompetitionSettings() {
   return { votingEndTime: data.voting_end_time };
 }
 
-export function isCompetitionOpen(votingEndTime: string) {
+export function isCompetitionOpen(votingEndTime: string): boolean {
   return new Date(votingEndTime).getTime() > Date.now();
+}
+
+export async function requireCompetitionOpen(closedMessage: string): Promise<
+  | { settings: { votingEndTime: string }; error: null; status: null }
+  | { settings: null; error: string; status: 403 | 500 }
+> {
+  const settings = await getCompetitionSettings();
+  if (!settings) {
+    return {
+      settings: null,
+      error: "Competition settings not found",
+      status: 500,
+    };
+  }
+
+  if (!isCompetitionOpen(settings.votingEndTime)) {
+    return { settings: null, error: closedMessage, status: 403 };
+  }
+
+  return { settings, error: null, status: null };
 }

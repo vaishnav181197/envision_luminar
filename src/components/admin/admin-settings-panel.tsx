@@ -73,13 +73,13 @@ export function AdminSettingsPanel({
                 id: "deadline",
                 title: "Deadline enforcement",
                 content:
-                  "After the voting deadline, submit and upvote actions are disabled for all users. Backend validation will reject late writes in Phase 2.",
+                  "After the voting deadline, student entry and upvote actions are disabled. The API rejects late writes even if the UI is bypassed.",
               },
               {
                 id: "deletion",
-                title: "Submission moderation",
+                title: "Project moderation",
                 content:
-                  "Admins can delete inappropriate submissions at any time. Deleted projects are removed from the public gallery and leaderboard.",
+                  "Admins can delete projects at any time. Deleted projects are removed from the public gallery and leaderboard.",
               },
             ]}
             defaultOpen="voting"

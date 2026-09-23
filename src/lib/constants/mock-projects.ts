@@ -72,7 +72,7 @@ export const MOCK_PROJECTS: Project[] = [
 export const LEADERBOARD_DATA = MOCK_PROJECTS.map((p, i) => ({
   rank: i + 1,
   title: p.title,
-  author: p.author.name,
+  author: p.author?.name ?? "—",
   votes: p.voteCount,
   demoUrl: p.demoUrl,
 }));
