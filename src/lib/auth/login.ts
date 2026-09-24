@@ -10,7 +10,7 @@ import type { UserRole } from "@/types/database";
 export type SessionUser = ReturnType<typeof toAdminSessionUser>;
 
 export function defaultRedirectForRole(role: UserRole | string): string {
-  return role === "admin" ? "/admin" : "/gallery";
+  return role === "admin" ? "/admin" : "/vote";
 }
 
 export function safePostLoginRedirect(
@@ -29,6 +29,11 @@ export function safePostLoginRedirect(
 
   if (requested.startsWith("/admin") && role !== "admin") {
     return fallback;
+  }
+
+  // Admins never land on the student gallery.
+  if (requested.startsWith("/gallery") && role === "admin") {
+    return "/admin";
   }
 
   return requested;

@@ -1,4 +1,4 @@
-export type { Database, UserRole } from "./database";
+export type { Database, UserRole, VotingStatus } from "./database";
 
 export interface Project {
   id: string;

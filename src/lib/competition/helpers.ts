@@ -1,4 +1,4 @@
-import type { AdminStats, LeaderboardRow } from "@/types/admin";
+import type { AdminStats, CompetitionSettings, LeaderboardRow } from "@/types/admin";
 import type { Project } from "@/types";
 
 export function buildLeaderboardRows(projects: Project[]): LeaderboardRow[] {
@@ -33,21 +33,47 @@ export function formatTimeRemaining(deadline: string): string {
   return `${minutes}m left`;
 }
 
-export function isCompetitionOpen(votingEndTime: string): boolean {
-  return new Date(votingEndTime).getTime() > Date.now();
+export function isDeadlinePassed(votingEndTime: string): boolean {
+  return new Date(votingEndTime).getTime() <= Date.now();
+}
+
+export function isCompetitionOpen(settings: CompetitionSettings): boolean {
+  return settings.votingStatus === "open" && !isDeadlinePassed(settings.votingEndTime);
+}
+
+export function isCompetitionPaused(settings: CompetitionSettings): boolean {
+  return settings.votingStatus === "paused" && !isDeadlinePassed(settings.votingEndTime);
+}
+
+export function isCompetitionEnded(settings: CompetitionSettings): boolean {
+  return settings.votingStatus === "stopped" || isDeadlinePassed(settings.votingEndTime);
 }
 
 export function isDeadlineApproaching(
-  votingEndTime: string,
+  settings: CompetitionSettings,
   daysThreshold = 3,
 ): boolean {
-  const diff = new Date(votingEndTime).getTime() - Date.now();
+  if (!isCompetitionOpen(settings)) return false;
+  const diff = new Date(settings.votingEndTime).getTime() - Date.now();
   const thresholdMs = daysThreshold * 24 * 60 * 60 * 1000;
   return diff > 0 && diff <= thresholdMs;
 }
 
-export function markWinners(projects: Project[], isOpen: boolean): Project[] {
-  if (isOpen || projects.length === 0) {
+export function votingStatusLabel(settings: CompetitionSettings): string {
+  if (isCompetitionPaused(settings)) return "Voting Paused";
+  if (settings.votingStatus === "stopped") return "Voting Stopped";
+  return isCompetitionOpen(settings) ? "Voting Open" : "Voting Closed";
+}
+
+export function votingStatusIndicator(
+  settings: CompetitionSettings,
+): "open" | "closed" | "pending" {
+  if (isCompetitionPaused(settings)) return "pending";
+  return isCompetitionOpen(settings) ? "open" : "closed";
+}
+
+export function markWinners(projects: Project[], isEnded: boolean): Project[] {
+  if (!isEnded || projects.length === 0) {
     return projects.map((project) => ({ ...project, isWinner: false }));
   }
 
@@ -64,17 +90,20 @@ export function markWinners(projects: Project[], isOpen: boolean): Project[] {
 
 export function buildAdminStats(
   projects: Project[],
-  votingEndTime: string,
+  settings: CompetitionSettings,
 ): AdminStats {
   const leaderboard = buildLeaderboardRows(projects);
   const leader = leaderboard[0];
+  const open = isCompetitionOpen(settings);
 
   return {
     totalSubmissions: projects.length,
     totalVotes: projects.reduce((sum, project) => sum + project.voteCount, 0),
     leadingProject: leader?.title ?? "—",
     leadingVotes: leader?.votes ?? 0,
-    timeRemaining: formatTimeRemaining(votingEndTime),
-    isOpen: isCompetitionOpen(votingEndTime),
+    timeRemaining: isCompetitionPaused(settings)
+      ? "Paused"
+      : formatTimeRemaining(settings.votingEndTime),
+    isOpen: open,
   };
 }

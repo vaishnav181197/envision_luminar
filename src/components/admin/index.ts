@@ -5,10 +5,12 @@ export { AdminSettingsPanel } from "./admin-settings-panel";
 export { AdminStatsRow } from "./admin-stats";
 export { AdminSubmissions } from "./admin-submissions";
 export { AdminVoters } from "./admin-voters";
+export { VotingControlsForm } from "./voting-controls-form";
 export {
   CompetitionClosedBanner,
   CompetitionStatusBanner,
 } from "./competition-status-banner";
 export { DeadlineSettingsForm } from "./deadline-settings-form";
 export { DeleteProjectDialog } from "./delete-project-dialog";
+export { ResetVotersDialog } from "./reset-voters-dialog";
 export { LeaderboardTable } from "./leaderboard-table";

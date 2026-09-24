@@ -1,12 +1,12 @@
 import { jsonError, jsonOk } from "@/lib/api/response";
 import {
   getCompetitionSettings,
-  isCompetitionOpen,
   requireAdmin,
 } from "@/lib/auth/session";
 import {
   buildAdminStats,
   buildLeaderboardRows,
+  isCompetitionEnded,
   markWinners,
 } from "@/lib/competition/helpers";
 import { fetchProjectsWithVotes } from "@/lib/competition/queries";
@@ -27,12 +27,11 @@ export async function GET() {
       return jsonError("Competition settings not found", 500);
     }
 
-    const isOpen = isCompetitionOpen(settings.votingEndTime);
-    const ranked = markWinners(projects, isOpen);
+    const ranked = markWinners(projects, isCompetitionEnded(settings));
 
     return jsonOk({
       leaderboard: buildLeaderboardRows(ranked),
-      stats: buildAdminStats(ranked, settings.votingEndTime),
+      stats: buildAdminStats(ranked, settings),
       settings,
     });
   } catch (err) {

@@ -1,3 +1,9 @@
+import type { CompetitionSettings } from "@/types/admin";
+import type { VotingStatus } from "@/types/database";
+import {
+  isCompetitionOpen,
+  isCompetitionPaused,
+} from "@/lib/competition/helpers";
 import { createClient } from "@/lib/supabase/server";
 
 export async function getSessionUser() {
@@ -44,24 +50,42 @@ export async function requireAdmin() {
   return auth;
 }
 
-export async function getCompetitionSettings() {
+function mapSettings(row: {
+  voting_end_time: string;
+  voting_status?: VotingStatus | null;
+}): CompetitionSettings {
+  return {
+    votingEndTime: row.voting_end_time,
+    votingStatus: row.voting_status ?? "open",
+  };
+}
+
+export async function getCompetitionSettings(): Promise<CompetitionSettings | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("settings")
-    .select("voting_end_time")
+    .select("voting_end_time, voting_status")
     .eq("id", 1)
     .single();
 
-  if (error || !data) return null;
-  return { votingEndTime: data.voting_end_time };
+  if (error || !data) {
+    // Fallback if migration 006 is not applied yet.
+    const legacy = await supabase
+      .from("settings")
+      .select("voting_end_time")
+      .eq("id", 1)
+      .single();
+    if (legacy.error || !legacy.data) return null;
+    return mapSettings(legacy.data);
+  }
+
+  return mapSettings(data);
 }
 
-export function isCompetitionOpen(votingEndTime: string): boolean {
-  return new Date(votingEndTime).getTime() > Date.now();
-}
+export { isCompetitionOpen } from "@/lib/competition/helpers";
 
 export async function requireCompetitionOpen(closedMessage: string): Promise<
-  | { settings: { votingEndTime: string }; error: null; status: null }
+  | { settings: CompetitionSettings; error: null; status: null }
   | { settings: null; error: string; status: 403 | 500 }
 > {
   const settings = await getCompetitionSettings();
@@ -73,7 +97,11 @@ export async function requireCompetitionOpen(closedMessage: string): Promise<
     };
   }
 
-  if (!isCompetitionOpen(settings.votingEndTime)) {
+  if (isCompetitionPaused(settings)) {
+    return { settings: null, error: "Voting is paused", status: 403 };
+  }
+
+  if (!isCompetitionOpen(settings)) {
     return { settings: null, error: closedMessage, status: 403 };
   }
 

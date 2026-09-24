@@ -14,9 +14,10 @@ import {
   buildLeaderboardRows,
   formatTimeRemaining,
   isCompetitionOpen,
+  isCompetitionPaused,
   isDeadlineApproaching,
 } from "@/lib/competition/helpers";
-import type { AdminStats, CompetitionSettings } from "@/types/admin";
+import type { AdminStats, CompetitionSettings, VotingStatus } from "@/types/admin";
 import type { Project } from "@/types";
 
 interface CompetitionContextValue {
@@ -25,12 +26,16 @@ interface CompetitionContextValue {
   leaderboard: ReturnType<typeof buildLeaderboardRows>;
   stats: AdminStats;
   isOpen: boolean;
+  isPaused: boolean;
   isDeadlineNear: boolean;
   isLoading: boolean;
   userVote: string | null;
   refresh: () => Promise<void>;
   deleteProject: (id: string) => Promise<{ success: boolean; error?: string }>;
   updateDeadline: (votingEndTime: string) => Promise<{ success: boolean; error?: string }>;
+  updateVotingStatus: (
+    votingStatus: VotingStatus,
+  ) => Promise<{ success: boolean; error?: string }>;
   castVote: (projectId: string) => Promise<{ success: boolean; error?: string; voted?: boolean }>;
   removeVote: () => Promise<{ success: boolean; error?: string }>;
 }
@@ -39,6 +44,7 @@ const CompetitionContext = createContext<CompetitionContextValue | null>(null);
 
 const DEFAULT_SETTINGS: CompetitionSettings = {
   votingEndTime: "2099-01-01T00:00:00.000Z",
+  votingStatus: "open",
 };
 
 export function CompetitionProvider({ children }: { children: ReactNode }) {
@@ -61,7 +67,10 @@ export function CompetitionProvider({ children }: { children: ReactNode }) {
       };
 
       setProjects(data.projects);
-      setSettings(data.settings);
+      setSettings({
+        votingEndTime: data.settings.votingEndTime,
+        votingStatus: data.settings.votingStatus ?? "open",
+      });
       setUserVote(data.userVote);
     } catch {
       setProjects([]);
@@ -88,7 +97,10 @@ export function CompetitionProvider({ children }: { children: ReactNode }) {
 
         if (cancelled) return;
         setProjects(data.projects);
-        setSettings(data.settings);
+        setSettings({
+          votingEndTime: data.settings.votingEndTime,
+          votingStatus: data.settings.votingStatus ?? "open",
+        });
         setUserVote(data.userVote);
       } catch {
         if (!cancelled) {
@@ -107,8 +119,9 @@ export function CompetitionProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const isOpen = isCompetitionOpen(settings.votingEndTime);
-  const isDeadlineNear = isDeadlineApproaching(settings.votingEndTime);
+  const isOpen = isCompetitionOpen(settings);
+  const isPaused = isCompetitionPaused(settings);
+  const isDeadlineNear = isDeadlineApproaching(settings);
 
   const leaderboard = useMemo(
     () => buildLeaderboardRows(projects),
@@ -124,10 +137,10 @@ export function CompetitionProvider({ children }: { children: ReactNode }) {
       totalVotes,
       leadingProject: leader?.title ?? "—",
       leadingVotes: leader?.votes ?? 0,
-      timeRemaining: formatTimeRemaining(settings.votingEndTime),
+      timeRemaining: isPaused ? "Paused" : formatTimeRemaining(settings.votingEndTime),
       isOpen,
     };
-  }, [projects, leaderboard, settings.votingEndTime, isOpen]);
+  }, [projects, leaderboard, settings.votingEndTime, isOpen, isPaused]);
 
   const deleteProject = useCallback(
     async (id: string): Promise<{ success: boolean; error?: string }> => {
@@ -164,7 +177,37 @@ export function CompetitionProvider({ children }: { children: ReactNode }) {
       }
 
       if (data.settings) {
-        setSettings(data.settings);
+        setSettings({
+          votingEndTime: data.settings.votingEndTime,
+          votingStatus: data.settings.votingStatus ?? "open",
+        });
+      }
+      return { success: true };
+    },
+    [],
+  );
+
+  const updateVotingStatus = useCallback(
+    async (votingStatus: VotingStatus): Promise<{ success: boolean; error?: string }> => {
+      const res = await fetch("/api/admin/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ votingStatus }),
+      });
+      const data = (await res.json()) as {
+        error?: string;
+        settings?: CompetitionSettings;
+      };
+
+      if (!res.ok) {
+        return { success: false, error: data.error ?? "Failed to update voting status" };
+      }
+
+      if (data.settings) {
+        setSettings({
+          votingEndTime: data.settings.votingEndTime,
+          votingStatus: data.settings.votingStatus ?? "open",
+        });
       }
       return { success: true };
     },
@@ -235,12 +278,14 @@ export function CompetitionProvider({ children }: { children: ReactNode }) {
       leaderboard,
       stats,
       isOpen,
+      isPaused,
       isDeadlineNear,
       isLoading,
       userVote,
       refresh,
       deleteProject,
       updateDeadline,
+      updateVotingStatus,
       castVote,
       removeVote,
     }),
@@ -250,12 +295,14 @@ export function CompetitionProvider({ children }: { children: ReactNode }) {
       leaderboard,
       stats,
       isOpen,
+      isPaused,
       isDeadlineNear,
       isLoading,
       userVote,
       refresh,
       deleteProject,
       updateDeadline,
+      updateVotingStatus,
       castVote,
       removeVote,
     ],

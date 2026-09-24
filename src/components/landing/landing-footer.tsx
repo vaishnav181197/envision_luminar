@@ -1,47 +1,37 @@
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
 
-const FOOTER_LINKS = [
-  { label: "Gallery", href: "/gallery" },
-  { label: "Contest Rules", href: "#rules" },
+const footerLinks = [
   { label: "Enter voting", href: "/vote" },
   { label: "Admin", href: "/login" },
 ];
 
 export function LandingFooter() {
   return (
-    <footer className="relative z-10 border-t border-white/5 bg-[#121212]">
-      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-        <div className="flex flex-col gap-8 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <Link href="/" className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-600">
-                <Sparkles className="h-3.5 w-3.5 text-white" />
-              </div>
-              <span className="font-bold text-white">Envision</span>
-            </Link>
-            <p className="mt-3 max-w-xs text-sm text-white/50">
-              The institute&apos;s premier UI design competition. Browse the
-              published entries and vote for exceptional work.
-            </p>
+    <footer className="border-t border-white/5 bg-[#0a0a0a]">
+      <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-10 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <Link href="/" className="flex items-center gap-2.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-600">
+            <Sparkles className="h-3.5 w-3.5 text-white" />
           </div>
+          <span className="text-sm font-semibold text-white">Envision</span>
+        </Link>
 
-          <nav className="flex flex-wrap gap-x-6 gap-y-2">
-            {FOOTER_LINKS.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="text-sm text-white/50 transition-colors hover:text-white"
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-        </div>
+        <nav className="flex flex-wrap gap-4">
+          {footerLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="text-sm text-white/50 transition-colors hover:text-white"
+            >
+              {link.label}
+            </Link>
+          ))}
+        </nav>
 
-        <div className="mt-8 border-t border-white/5 pt-6 text-center text-xs text-white/40 sm:text-left">
-          © 2026 Envision UI Design Competition. All rights reserved.
-        </div>
+        <p className="text-xs text-white/30">
+          Student UI Design Competition · {new Date().getFullYear()}
+        </p>
       </div>
     </footer>
   );

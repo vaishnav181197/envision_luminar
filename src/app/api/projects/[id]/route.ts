@@ -1,10 +1,12 @@
 import { jsonError, jsonOk } from "@/lib/api/response";
 import {
   getCompetitionSettings,
-  isCompetitionOpen,
   requireAdmin,
 } from "@/lib/auth/session";
-import { markWinners } from "@/lib/competition/helpers";
+import {
+  isCompetitionEnded,
+  markWinners,
+} from "@/lib/competition/helpers";
 import {
   fetchProjectById,
   fetchProjectsWithVotes,
@@ -19,14 +21,14 @@ async function loadProjectWithWinner(id: string): Promise<Project | null> {
   if (!project) return null;
 
   const settings = await getCompetitionSettings();
-  const isOpen = settings ? isCompetitionOpen(settings.votingEndTime) : true;
-  if (isOpen) {
+  const ended = settings ? isCompetitionEnded(settings) : false;
+  if (!ended) {
     return { ...project, isWinner: false };
   }
 
   const projects = await fetchProjectsWithVotes();
   return (
-    markWinners(projects, false).find((row) => row.id === id) ?? {
+    markWinners(projects, true).find((row) => row.id === id) ?? {
       ...project,
       isWinner: false,
     }

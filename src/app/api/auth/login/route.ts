@@ -3,6 +3,7 @@ import {
   authenticateWithPassword,
   safePostLoginRedirect,
 } from "@/lib/auth/login";
+import { clearStudentSessionCookie } from "@/lib/auth/student-session";
 
 interface LoginBody {
   email?: string;
@@ -29,6 +30,11 @@ export async function POST(request: Request) {
   const result = await authenticateWithPassword(email, password);
   if (!result.user) {
     return jsonError(result.error, result.status);
+  }
+
+  // Admin sessions must not carry a student voting cookie.
+  if (result.user.role === "admin") {
+    await clearStudentSessionCookie();
   }
 
   return jsonOk({

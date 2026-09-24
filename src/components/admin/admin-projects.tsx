@@ -274,7 +274,7 @@ export function AdminProjects({
         <EmptyState
           icon={<FolderKanban className="h-5 w-5" />}
           title="No projects yet"
-          description="Publish the first competing UI to start the gallery."
+          description="Publish the first competing UI for students to vote on."
         />
       ) : (
         <>

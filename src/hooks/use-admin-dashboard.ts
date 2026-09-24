@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useCompetition } from "@/contexts/competition-context";
 import {
   isCompetitionOpen,
+  isCompetitionPaused,
   isDeadlineApproaching,
 } from "@/lib/competition/helpers";
 import type { Project } from "@/types";
@@ -15,6 +16,7 @@ import type {
   CompetitionSettings,
   EligibleStudent,
   LeaderboardRow,
+  VotingStatus,
 } from "@/types/admin";
 
 const EMPTY_STATS: AdminStats = {
@@ -28,6 +30,7 @@ const EMPTY_STATS: AdminStats = {
 
 const DEFAULT_SETTINGS: CompetitionSettings = {
   votingEndTime: "2099-01-01T00:00:00.000Z",
+  votingStatus: "open",
 };
 
 interface LeaderboardResponse {
@@ -97,7 +100,7 @@ export function useAdminDashboard() {
         return true;
       }
       if (status === 403) {
-        router.replace("/gallery");
+        router.replace("/");
         return true;
       }
       return false;
@@ -117,7 +120,10 @@ export function useAdminDashboard() {
     const data = (await res.json()) as LeaderboardResponse;
     setLeaderboard(data.leaderboard);
     setStats(data.stats);
-    setSettings(data.settings);
+    setSettings({
+      votingEndTime: data.settings.votingEndTime,
+      votingStatus: data.settings.votingStatus ?? "open",
+    });
     return true;
   }, [redirectIfUnauthorized]);
 
@@ -424,6 +430,28 @@ export function useAdminDashboard() {
     [redirectIfUnauthorized],
   );
 
+  const resetAllVoters = useCallback(async (): Promise<{
+    success: boolean;
+    error?: string;
+    deleted?: number;
+  }> => {
+    const res = await fetch("/api/admin/voters", { method: "DELETE" });
+    if (redirectIfUnauthorized(res.status)) {
+      return { success: false, error: "Unauthorized" };
+    }
+    if (!res.ok) {
+      return {
+        success: false,
+        error: await readError(res, "Failed to reset voters"),
+      };
+    }
+
+    const data = (await res.json()) as { deleted?: number };
+    setVoters([]);
+    await Promise.all([loadLeaderboard(), refreshCompetition()]);
+    return { success: true, deleted: data.deleted ?? 0 };
+  }, [loadLeaderboard, redirectIfUnauthorized, refreshCompetition]);
+
   const updateDeadline = useCallback(
     async (
       votingEndTime: string,
@@ -446,7 +474,10 @@ export function useAdminDashboard() {
 
       const data = (await res.json()) as { settings?: CompetitionSettings };
       if (data.settings) {
-        setSettings(data.settings);
+        setSettings({
+          votingEndTime: data.settings.votingEndTime,
+          votingStatus: data.settings.votingStatus ?? "open",
+        });
       }
 
       await Promise.all([loadLeaderboard(), refreshCompetition()]);
@@ -455,8 +486,43 @@ export function useAdminDashboard() {
     [loadLeaderboard, redirectIfUnauthorized, refreshCompetition],
   );
 
-  const isOpen = isCompetitionOpen(settings.votingEndTime);
-  const isDeadlineNear = isDeadlineApproaching(settings.votingEndTime);
+  const updateVotingStatus = useCallback(
+    async (
+      votingStatus: VotingStatus,
+    ): Promise<{ success: boolean; error?: string }> => {
+      const res = await fetch("/api/admin/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ votingStatus }),
+      });
+
+      if (redirectIfUnauthorized(res.status)) {
+        return { success: false, error: "Unauthorized" };
+      }
+      if (!res.ok) {
+        return {
+          success: false,
+          error: await readError(res, "Failed to update voting status"),
+        };
+      }
+
+      const data = (await res.json()) as { settings?: CompetitionSettings };
+      if (data.settings) {
+        setSettings({
+          votingEndTime: data.settings.votingEndTime,
+          votingStatus: data.settings.votingStatus ?? "open",
+        });
+      }
+
+      await Promise.all([loadLeaderboard(), refreshCompetition()]);
+      return { success: true };
+    },
+    [loadLeaderboard, redirectIfUnauthorized, refreshCompetition],
+  );
+
+  const isOpen = isCompetitionOpen(settings);
+  const isPaused = isCompetitionPaused(settings);
+  const isDeadlineNear = isDeadlineApproaching(settings);
 
   return {
     user,
@@ -466,6 +532,7 @@ export function useAdminDashboard() {
     stats,
     settings,
     isOpen,
+    isPaused,
     isDeadlineNear,
     isLoading,
     error,
@@ -476,6 +543,8 @@ export function useAdminDashboard() {
     addVoter,
     importVoters,
     deleteVoter,
+    resetAllVoters,
     updateDeadline,
+    updateVotingStatus,
   };
 }

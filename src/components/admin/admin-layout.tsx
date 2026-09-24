@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import {
   FolderKanban,
   LayoutDashboard,
@@ -116,13 +115,6 @@ export function AdminLayout({
                 Log out
               </Button>
             </div>
-
-            <Link
-              href="/gallery"
-              className="mt-4 block text-center text-xs text-text-muted transition-colors hover:text-primary-600"
-            >
-              View public gallery →
-            </Link>
           </div>
         </aside>
 

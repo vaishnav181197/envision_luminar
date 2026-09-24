@@ -1,4 +1,5 @@
 import type { Project } from "@/types";
+import type { VotingStatus } from "@/types/database";
 
 export interface LeaderboardRow {
   id: string;
@@ -21,6 +22,7 @@ export interface EligibleStudent {
 
 export interface CompetitionSettings {
   votingEndTime: string;
+  votingStatus: VotingStatus;
 }
 
 export interface AdminStats {
@@ -42,3 +44,5 @@ export interface AdminProject extends Project {
   authorEmail?: string;
   submittedAt?: string;
 }
+
+export type { VotingStatus };

@@ -14,6 +14,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { useAdminDashboard } from "@/hooks/use-admin-dashboard";
+import { isCompetitionEnded } from "@/lib/competition/helpers";
 import type { AdminTab } from "@/types/admin";
 
 export default function AdminPage() {
@@ -35,7 +36,9 @@ export default function AdminPage() {
     addVoter,
     importVoters,
     deleteVoter,
+    resetAllVoters,
     updateDeadline,
+    updateVotingStatus,
   } = useAdminDashboard();
 
   const { addToast } = useToast();
@@ -95,7 +98,7 @@ export default function AdminPage() {
       if (result.success) {
         addToast({
           title: "Project published",
-          description: `"${values.title}" is now in the gallery.`,
+          description: `"${values.title}" is now published for student voting.`,
           variant: "success",
         });
       }
@@ -183,6 +186,24 @@ export default function AdminPage() {
     [deleteVoter, addToast],
   );
 
+  const handleResetAllVoters = useCallback(async () => {
+    const result = await resetAllVoters();
+    if (result.success) {
+      addToast({
+        title: "Voter list reset",
+        description: `Removed ${result.deleted ?? 0} ${(result.deleted ?? 0) === 1 ? "email" : "emails"} and their votes.`,
+        variant: "success",
+      });
+    } else {
+      addToast({
+        title: "Could not reset voters",
+        description: result.error ?? "Please try again.",
+        variant: "error",
+      });
+    }
+    return result;
+  }, [resetAllVoters, addToast]);
+
   const handleSaveDeadline = useCallback(
     async (votingEndTime: string) => {
       const result = await updateDeadline(votingEndTime);
@@ -206,7 +227,41 @@ export default function AdminPage() {
     [updateDeadline, addToast],
   );
 
+  const handleUpdateVotingStatus = useCallback(
+    async (votingStatus: "open" | "paused" | "stopped") => {
+      const result = await updateVotingStatus(votingStatus);
+
+      if (result.success) {
+        const titles = {
+          open: "Voting resumed",
+          paused: "Voting paused",
+          stopped: "Voting stopped",
+        } as const;
+        addToast({
+          title: titles[votingStatus],
+          description:
+            votingStatus === "stopped"
+              ? "Winners are now visible. Set a future deadline to reopen."
+              : votingStatus === "paused"
+                ? "Students cannot enter or vote until you resume."
+                : "Students can enter and vote again.",
+          variant: "success",
+        });
+      } else {
+        addToast({
+          title: "Could not update voting status",
+          description: result.error ?? "Please try again.",
+          variant: "error",
+        });
+      }
+
+      return result;
+    },
+    [updateVotingStatus, addToast],
+  );
+
   const topRows = leaderboard.slice(0, 3);
+  const isEnded = isCompetitionEnded(settings);
 
   return (
     <AdminLayout
@@ -233,6 +288,7 @@ export default function AdminPage() {
           topRows={topRows}
           loading={isLoading}
           isOpen={isOpen}
+          isEnded={isEnded}
         />
       )}
 
@@ -257,15 +313,17 @@ export default function AdminPage() {
           onAdd={handleAddVoter}
           onImport={handleImportVoters}
           onDelete={handleDeleteVoter}
+          onResetAll={handleResetAllVoters}
         />
       )}
 
       {activeTab === "settings" && (
         <AdminSettingsPanel
-          votingEndTime={settings.votingEndTime}
+          settings={settings}
           isOpen={isOpen}
           isDeadlineNear={isDeadlineNear}
           onSaveDeadline={handleSaveDeadline}
+          onUpdateVotingStatus={handleUpdateVotingStatus}
         />
       )}
 

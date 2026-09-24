@@ -6,11 +6,16 @@ import { Calendar, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusIndicator } from "@/components/ui/status-indicator";
+import {
+  votingStatusIndicator,
+  votingStatusLabel,
+} from "@/lib/competition/helpers";
 import { cn } from "@/lib/utils/cn";
 import { formatDateTime } from "@/lib/utils/format-date";
+import type { CompetitionSettings } from "@/types/admin";
 
 export interface DeadlineSettingsFormProps {
-  votingEndTime: string;
+  settings: CompetitionSettings;
   isOpen: boolean;
   onSave: (
     votingEndTime: string,
@@ -26,17 +31,17 @@ function toDatetimeLocalValue(iso: string): string {
 }
 
 export function DeadlineSettingsForm({
-  votingEndTime,
+  settings,
   isOpen,
   onSave,
   className,
 }: DeadlineSettingsFormProps) {
-  const [value, setValue] = useState(toDatetimeLocalValue(votingEndTime));
+  const [value, setValue] = useState(toDatetimeLocalValue(settings.votingEndTime));
   const [error, setError] = useState<string | undefined>();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const formattedCurrent = formatDateTime(votingEndTime, "full");
+  const formattedCurrent = formatDateTime(settings.votingEndTime, "full");
 
   const handleSave = async () => {
     setSaving(true);
@@ -65,8 +70,8 @@ export function DeadlineSettingsForm({
           <p className="mt-0.5 text-sm text-text-secondary">{formattedCurrent}</p>
         </div>
         <StatusIndicator
-          status={isOpen ? "open" : "closed"}
-          label={isOpen ? "Voting Open" : "Voting Closed"}
+          status={votingStatusIndicator(settings)}
+          label={votingStatusLabel(settings)}
         />
       </div>
 
@@ -94,6 +99,11 @@ export function DeadlineSettingsForm({
         </Button>
         {saved && (
           <span className="text-sm font-medium text-success-600">Saved successfully</span>
+        )}
+        {!isOpen && settings.votingStatus === "open" && (
+          <span className="text-sm text-text-tertiary">
+            Deadline has passed — extend it to reopen voting.
+          </span>
         )}
       </div>
     </div>

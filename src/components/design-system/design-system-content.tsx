@@ -70,8 +70,9 @@ import {
   DeadlineSettingsForm,
   DeleteProjectDialog,
   LeaderboardTable,
+  VotingControlsForm,
 } from "@/components/admin";
-import type { EligibleStudent } from "@/types/admin";
+import type { CompetitionSettings, EligibleStudent } from "@/types/admin";
 
 export function DesignSystemContent() {
   const { addToast } = useToast();
@@ -99,7 +100,23 @@ export function DesignSystemContent() {
 
   const adminDemoRows = buildLeaderboardRows(MOCK_PROJECTS).slice(0, 4);
   const demoDeadline = "2026-08-15T23:59:00.000Z";
-  const demoClosedDeadline = "2026-07-01T23:59:00.000Z";
+  const demoClosedDeadline = "2020-01-01T00:00:00.000Z";
+  const demoOpenSettings: CompetitionSettings = {
+    votingEndTime: demoDeadline,
+    votingStatus: "open",
+  };
+  const demoPausedSettings: CompetitionSettings = {
+    votingEndTime: demoDeadline,
+    votingStatus: "paused",
+  };
+  const demoStoppedSettings: CompetitionSettings = {
+    votingEndTime: demoClosedDeadline,
+    votingStatus: "stopped",
+  };
+  const demoClosedSettings: CompetitionSettings = {
+    votingEndTime: demoClosedDeadline,
+    votingStatus: "open",
+  };
 
   return (
     <>
@@ -558,8 +575,8 @@ export function DesignSystemContent() {
         <ShowcaseBox label="Breadcrumbs">
           <Breadcrumbs
             items={[
-              { label: "Gallery", href: "/gallery" },
-              { label: "FinFlow Dashboard" },
+              { label: "Admin", href: "/admin" },
+              { label: "Projects" },
             ]}
           />
         </ShowcaseBox>
@@ -591,7 +608,7 @@ export function DesignSystemContent() {
                 id: "rules",
                 title: "Competition Rules",
                 content:
-                  "Admins publish the competing UIs. Listed students enter with email plus a 6-digit code and cast one vote before the deadline.",
+                  "Admins publish the competing UIs. Listed students enter with their email and cast one vote before the deadline.",
               },
               {
                 id: "judging",
@@ -699,21 +716,44 @@ export function DesignSystemContent() {
         <ShowcaseBox label="Competition Status Banner">
           <div className="space-y-3">
             <CompetitionStatusBanner
+              settings={demoOpenSettings}
               isOpen
               isDeadlineNear={false}
-              deadline={demoDeadline}
             />
             <CompetitionStatusBanner
+              settings={demoOpenSettings}
               isOpen
               isDeadlineNear
-              deadline={demoDeadline}
             />
             <CompetitionStatusBanner
+              settings={demoPausedSettings}
               isOpen={false}
               isDeadlineNear={false}
-              deadline={demoClosedDeadline}
+            />
+            <CompetitionStatusBanner
+              settings={demoStoppedSettings}
+              isOpen={false}
+              isDeadlineNear={false}
+            />
+            <CompetitionStatusBanner
+              settings={demoClosedSettings}
+              isOpen={false}
+              isDeadlineNear={false}
             />
           </div>
+        </ShowcaseBox>
+
+        <ShowcaseBox label="Voting Controls" className="mt-4">
+          <VotingControlsForm
+            settings={demoOpenSettings}
+            onUpdateStatus={(status) => {
+              addToast({
+                title: `Voting status → ${status} (demo)`,
+                variant: "success",
+              });
+              return { success: true };
+            }}
+          />
         </ShowcaseBox>
 
         <ShowcaseBox label="Leaderboard Table" className="mt-4">
@@ -729,7 +769,7 @@ export function DesignSystemContent() {
 
         <ShowcaseBox label="Deadline Settings Form" className="mt-4">
           <DeadlineSettingsForm
-            votingEndTime={demoDeadline}
+            settings={demoOpenSettings}
             isOpen
             onSave={(value) => {
               if (new Date(value).getTime() <= Date.now()) {
@@ -789,6 +829,11 @@ export function DesignSystemContent() {
             onDelete={async (id) => {
               setDemoVoters((current) => current.filter((voter) => voter.id !== id));
               return { success: true };
+            }}
+            onResetAll={async () => {
+              const deleted = demoVoters.length;
+              setDemoVoters([]);
+              return { success: true, deleted };
             }}
           />
         </ShowcaseBox>

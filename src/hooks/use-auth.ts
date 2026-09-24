@@ -10,42 +10,58 @@ interface AuthUser {
   batch: string | null;
 }
 
+interface VoterSession {
+  id: string;
+  email: string;
+}
+
 export function useAuth() {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [voter, setVoter] = useState<VoterSession | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const applyMePayload = useCallback(
+    (data: {
+      user?: AuthUser;
+      voter?: { id: string; email: string; role?: "student" };
+    }) => {
+      if (data.user?.role === "admin") {
+        setUser(data.user);
+        setVoter(null);
+        return;
+      }
+
+      setUser(null);
+
+      if (data.voter) {
+        setVoter({ id: data.voter.id, email: data.voter.email });
+      } else {
+        setVoter(null);
+      }
+    },
+    [],
+  );
 
   const refresh = useCallback(async () => {
     try {
       const res = await fetch("/api/me");
       if (!res.ok) {
         setUser(null);
+        setVoter(null);
         return;
       }
       const data = (await res.json()) as {
         user?: AuthUser;
         voter?: { id: string; email: string; role: "student" };
       };
-      if (data.user) {
-        setUser(data.user);
-        return;
-      }
-      if (data.voter) {
-        setUser({
-          id: data.voter.id,
-          email: data.voter.email,
-          name: data.voter.email,
-          role: "student",
-          batch: null,
-        });
-        return;
-      }
-      setUser(null);
+      applyMePayload(data);
     } catch {
       setUser(null);
+      setVoter(null);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [applyMePayload]);
 
   useEffect(() => {
     let cancelled = false;
@@ -56,6 +72,7 @@ export function useAuth() {
         if (cancelled) return;
         if (!res.ok) {
           setUser(null);
+          setVoter(null);
           return;
         }
         const data = (await res.json()) as {
@@ -63,24 +80,11 @@ export function useAuth() {
           voter?: { id: string; email: string; role: "student" };
         };
         if (cancelled) return;
-        if (data.user) {
-          setUser(data.user);
-          return;
-        }
-        if (data.voter) {
-          setUser({
-            id: data.voter.id,
-            email: data.voter.email,
-            name: data.voter.email,
-            role: "student",
-            batch: null,
-          });
-          return;
-        }
-        setUser(null);
+        applyMePayload(data);
       } catch {
         if (!cancelled) {
           setUser(null);
+          setVoter(null);
         }
       } finally {
         if (!cancelled) {
@@ -93,7 +97,17 @@ export function useAuth() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [applyMePayload]);
 
-  return { user, loading, isAdmin: user?.role === "admin", refresh };
+  const isAdmin = user?.role === "admin";
+  const isVoter = Boolean(voter) && !isAdmin;
+
+  return {
+    user,
+    voter,
+    loading,
+    isAdmin,
+    isVoter,
+    refresh,
+  };
 }

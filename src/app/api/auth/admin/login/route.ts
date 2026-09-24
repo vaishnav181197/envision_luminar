@@ -1,5 +1,6 @@
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { authenticateWithPassword, defaultRedirectForRole } from "@/lib/auth/login";
+import { clearStudentSessionCookie } from "@/lib/auth/student-session";
 import { createClient } from "@/lib/supabase/server";
 
 interface AdminLoginBody {
@@ -36,6 +37,8 @@ export async function POST(request: Request) {
       403,
     );
   }
+
+  await clearStudentSessionCookie();
 
   return jsonOk({
     user: result.user,

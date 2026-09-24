@@ -9,9 +9,9 @@ const RULES = [
   },
   {
     icon: Vote,
-    title: "Email plus a 6-digit code",
+    title: "Listed email opens voting",
     description:
-      "Enter the email on the voter list, verify the one-time code sent to that inbox, then open the gallery.",
+      "Enter the email on the voter list to open the gallery. Unlisted emails cannot vote.",
   },
   {
     icon: Trophy,
@@ -23,7 +23,7 @@ const RULES = [
     icon: Clock,
     title: "Deadline enforced",
     description:
-      "Voting and student entry close at the competition deadline. No codes or votes are accepted after that time.",
+      "Voting and student entry close at the competition deadline. No new votes are accepted after that time.",
   },
   {
     icon: CheckCircle2,

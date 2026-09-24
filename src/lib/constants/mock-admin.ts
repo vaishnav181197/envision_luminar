@@ -17,6 +17,7 @@ function defaultVotingEndTime(): string {
 
 export const MOCK_COMPETITION_SETTINGS = {
   votingEndTime: defaultVotingEndTime(),
+  votingStatus: "open" as const,
 };
 
 export const MOCK_ADMIN_USER: AdminUser = {

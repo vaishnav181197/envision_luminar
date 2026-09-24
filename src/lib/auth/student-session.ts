@@ -11,10 +11,18 @@ export interface StudentSession {
 }
 
 function secret(): string {
+  const configured = process.env.STUDENT_SESSION_SECRET?.trim();
+  if (configured) return configured;
+
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "STUDENT_SESSION_SECRET is required in production for voting cookies.",
+    );
+  }
+
+  // Local/dev only — never used when NODE_ENV=production.
   return (
-    process.env.STUDENT_SESSION_SECRET ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ||
     "envision-dev-student-secret"
   );
 }

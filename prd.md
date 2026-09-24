@@ -2,20 +2,19 @@
 
 ## 1. Project Overview
 
-Envision hosts an institute UI design competition. **Administrators publish every competing project** and run the voting window. **Students only vote.** A student enters by submitting an admission email that the admin already registered, verifies a 6-digit OTP sent to that inbox, then browses the gallery and casts exactly one changeable vote before the deadline.
+Envision hosts an institute UI design competition. **Administrators publish every competing project** and run the voting window. **Students only vote.** A student enters by submitting an admission email that the admin already registered, then browses the gallery and casts exactly one changeable vote before the deadline.
 
 ## 2. Tech Stack (Zero-Cost Architecture)
 
 - **Frontend & API Routes:** Next.js (App Router) + React
 - **Styling:** Tailwind CSS
 - **Database & Auth:** Supabase (PostgreSQL, Auth for admins only, Row Level Security)
-- **Student mailer:** Resend (not Supabase Auth OTP / built-in mailer); console fallback in local development
 - **Hosting:** Vercel (Hobby Tier)
 
 ## 3. User Roles
 
-1. **Admin:** Password sign-in. Full control of competing UIs, the voter email list, the voting deadline, and the leaderboard.
-2. **Student (voter only):** Not a password account. Enters voting with a pre-registered email + OTP, views the gallery, and casts one changeable vote.
+1. **Admin:** Password sign-in. Full control of competing UIs, the voter email list, the voting window (deadline, pause, stop), and the leaderboard.
+2. **Student (voter only):** Not a password account. Enters voting with a pre-registered email, views the gallery, and casts one changeable vote.
 
 ## 4. Core Features & Functional Requirements
 
@@ -26,15 +25,13 @@ Envision hosts an institute UI design competition. **Administrators publish ever
 - `/admin/login` redirects to `/login`.
 - Students do not register and do not use password login.
 
-### 4.2. Student Entry (Email + OTP)
+### 4.2. Student Entry (Listed email)
 
 - Admin pre-loads every eligible admission email (unique).
 - Student submits that email on `/vote`.
-- If the email is **not** on the list, the API returns “this email is not registered for voting” and **sends no code**.
-- If the email **is** listed, the API emails a 6-digit code (hashed at rest, ~10 minute expiry).
-- Student verifies the code (resend allowed, rate-limited). Failed attempts lock after about 5 tries.
-- On success, the server sets a signed httpOnly **voting cookie**. Students are not created in `auth.users`.
-- Do **not** use `supabase.auth.signInWithOtp`.
+- If the email is **not** on the list, the API returns “this email is not registered for voting” and sets no cookie.
+- If the email **is** listed, the server sets a signed httpOnly **voting cookie**. Students are not created in `auth.users`.
+- One listed email can hold one active vote.
 
 ### 4.3. Project Submission (Admin only)
 
@@ -59,9 +56,10 @@ Envision hosts an institute UI design competition. **Administrators publish ever
 
 ### 4.6. Time-Bound Competition
 
-- Global `voting_end_time` in `settings`.
-- **Pre-deadline:** admin manages projects/voters; listed students may enter (OTP) and vote.
-- **Post-deadline:** UI disables upvote; APIs reject student enter/verify/vote writes. Admin can still view the leaderboard and manage records.
+- Global `voting_end_time` and `voting_status` (`open` | `paused` | `stopped`) in `settings`.
+- **Open + pre-deadline:** admin manages projects/voters; listed students may enter and vote.
+- **Paused:** entry and votes blocked; winners stay hidden. Admin can resume anytime before the deadline.
+- **Stopped or post-deadline:** UI disables upvote; APIs reject student enter and vote writes; winners are shown. Admin can still view the leaderboard and manage records. Reopening requires a future deadline.
 
 ### 4.7. Admin Dashboard
 
@@ -70,7 +68,7 @@ Protected `/admin` with:
 - **Overview** — stats and top projects / winner after close
 - **Projects** — create, edit, delete competing UIs
 - **Voters** — add/import/remove eligible emails
-- **Settings** — voting deadline
+- **Settings** — voting deadline, pause, and stop
 - Leaderboard sorted by vote count descending
 
 ## 5. Database Schema (Supabase PostgreSQL)
@@ -85,15 +83,6 @@ Protected `/admin` with:
 - `id`: UUID (PK)
 - `email`: TEXT UNIQUE NOT NULL (lowercase)
 - `created_by`: UUID → `profiles.id`
-- `created_at`: timestamptz
-
-### `otp_challenges`
-
-- `id`: UUID (PK)
-- `email`: TEXT NOT NULL
-- `code_hash`: TEXT NOT NULL
-- `expires_at`: timestamptz
-- `attempts`: INTEGER default 0
 - `created_at`: timestamptz
 
 ### `projects`
@@ -113,11 +102,12 @@ Protected `/admin` with:
 
 - `id`: INTEGER PK (single row)
 - `voting_end_time`: timestamptz
+- `voting_status`: `open` | `paused` | `stopped`
 
 ## 6. UI/UX & Design Requirements
 
 - Minimalist, modern, content-first.
-- **Home / vote entry:** email, then OTP, then gallery.
+- **Home / vote entry:** listed email, then gallery.
 - **Project card:** thumbnail or placeholder, title, author, batch, vote count, View Demo, Upvote.
 - **Admin:** data tables for projects, voters, and leaderboard; project form; single-email form; spreadsheet upload.
 - Responsive on mobile.
@@ -126,12 +116,11 @@ Protected `/admin` with:
 
 - RLS: public read of projects/vote counts; only admins write projects and voter emails; votes written only through server APIs / RPC using the student session.
 - Deadline enforced on the server for student writes.
-- OTP codes stored hashed; rate-limit sends (1/email/60s and a daily cap).
 - Performance: Server Components where possible.
 
 ## 8. Implementation Notes
 
 1. Admin Auth stays on Supabase email/password.
-2. Student session is a signed cookie after OTP verify.
-3. Mailer uses `RESEND_API_KEY` plus `STUDENT_SESSION_SECRET` for the voting cookie.
-4. Build admin project/voter APIs first, then student enter/verify/vote APIs, then admin UI.
+2. Student session is a signed cookie after the listed email is accepted.
+3. Cookie signing uses `STUDENT_SESSION_SECRET`.
+4. Build admin project/voter APIs first, then student enter/vote APIs, then admin UI.

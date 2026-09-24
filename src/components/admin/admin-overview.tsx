@@ -8,7 +8,10 @@ export interface AdminOverviewProps {
   stats: AdminStats;
   topRows: LeaderboardRow[];
   loading?: boolean;
+  /** True while students may still vote (open + future deadline). */
   isOpen?: boolean;
+  /** True when winners should be shown (stopped or deadline passed). */
+  isEnded?: boolean;
 }
 
 export function AdminOverview({
@@ -16,6 +19,7 @@ export function AdminOverview({
   topRows,
   loading,
   isOpen = true,
+  isEnded = false,
 }: AdminOverviewProps) {
   const winners = topRows.filter((row) => row.isWinner);
   const winnerLabel =
@@ -34,11 +38,18 @@ export function AdminOverview({
         </p>
       </div>
 
-      {!loading && !isOpen && winners.length > 0 && (
+      {!loading && isEnded && winners.length > 0 && (
         <Alert variant="success" title="Winner declared">
           {winners.length > 1
             ? `Tied winners: ${winnerLabel}.`
             : `${winnerLabel} is the current winner by vote count.`}
+        </Alert>
+      )}
+
+      {!loading && !isOpen && !isEnded && (
+        <Alert variant="warning" title="Voting paused">
+          Entry and votes are paused. Winners stay hidden until you stop voting or
+          the deadline passes.
         </Alert>
       )}
 

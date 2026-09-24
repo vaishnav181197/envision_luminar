@@ -1,4 +1,5 @@
 export type UserRole = "student" | "admin";
+export type VotingStatus = "open" | "paused" | "stopped";
 
 export type Database = {
   public: {
@@ -50,33 +51,6 @@ export type Database = {
           id?: string;
           email?: string;
           created_by?: string;
-          created_at?: string;
-        };
-        Relationships: [];
-      };
-      otp_challenges: {
-        Row: {
-          id: string;
-          email: string;
-          code_hash: string;
-          expires_at: string;
-          attempts: number;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          email: string;
-          code_hash: string;
-          expires_at: string;
-          attempts?: number;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          email?: string;
-          code_hash?: string;
-          expires_at?: string;
-          attempts?: number;
           created_at?: string;
         };
         Relationships: [];
@@ -142,14 +116,17 @@ export type Database = {
         Row: {
           id: number;
           voting_end_time: string;
+          voting_status: VotingStatus;
         };
         Insert: {
           id?: number;
           voting_end_time: string;
+          voting_status?: VotingStatus;
         };
         Update: {
           id?: number;
           voting_end_time?: string;
+          voting_status?: VotingStatus;
         };
         Relationships: [];
       };

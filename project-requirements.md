@@ -2,13 +2,13 @@
 
 ## Overview
 
-A web platform hosting a UI design competition for institute students. **Admins publish every competing UI** and manage the voter list and deadline. **Students only vote** after entering a pre-registered admission email and verifying a 6-digit OTP.
+A web platform hosting a UI design competition for institute students. **Admins publish every competing UI** and manage the voter list and deadline. **Students only vote** after entering a pre-registered admission email.
 
 ## User Roles
 
 ### Student (voter only)
 
-- Enter voting with a listed admission email + OTP (not a password account)
+- Enter voting with a listed admission email (not a password account)
 - View project gallery after a valid voting cookie
 - Cast **exactly one vote** (can change to a different project)
 - Cannot submit projects or access `/admin`
@@ -20,6 +20,7 @@ A web platform hosting a UI design competition for institute students. **Admins 
 - Add voter emails one-by-one or import Excel/CSV (emails only, unique)
 - Remove eligible emails
 - Set/update competition deadline
+- Pause, resume, or stop voting from Settings
 - View leaderboard and vote totals
 
 ## Core Business Rules
@@ -34,17 +35,17 @@ A web platform hosting a UI design competition for institute students. **Admins 
 ### Student entry
 
 1. Student submits email
-2. If not on `eligible_students` → error, no email sent
-3. If listed → hashed 6-digit OTP emailed via Resend (~10 minute expiry; console log in local dev without a key)
-4. Verify code (max ~5 attempts). Resend rate-limited (1/email/60s + daily cap)
-5. Signed httpOnly voting cookie on success
-6. Do not use Supabase Auth OTP
+2. If not on `eligible_students` → error, no cookie
+3. If listed → signed httpOnly voting cookie
+4. That email can hold one active vote (`UNIQUE(eligible_student_id)`)
 
 ### Time-Bound Competition
 
-- Global `voting_end_time` in `settings`
-- **Before deadline:** admin manages projects/voters; students may enter and vote
-- **After deadline:** upvote disabled; student enter/verify/vote APIs reject writes
+- Global `voting_end_time` + `voting_status` (`open` | `paused` | `stopped`) in `settings`
+- **Before deadline (open):** admin manages projects/voters; students may enter and vote
+- **Paused:** entry/votes blocked; winners not shown; resume restores voting if deadline is still future
+- **Stopped or after deadline:** upvote disabled; student enter and vote APIs reject writes; winners shown
+- Reopen after stop requires a future deadline
 - Admin may still review results and manage the voter list
 
 ### Project Submission (admin)
@@ -89,17 +90,6 @@ created_by UUID REFERENCES profiles(id) NOT NULL
 created_at TIMESTAMPTZ DEFAULT now()
 ```
 
-### `otp_challenges`
-
-```sql
-id         UUID PRIMARY KEY DEFAULT gen_random_uuid()
-email      TEXT NOT NULL
-code_hash  TEXT NOT NULL
-expires_at TIMESTAMPTZ NOT NULL
-attempts   INTEGER NOT NULL DEFAULT 0
-created_at TIMESTAMPTZ DEFAULT now()
-```
-
 ### `projects`
 
 ```sql
@@ -126,8 +116,10 @@ created_at           TIMESTAMPTZ DEFAULT now()
 ### `settings`
 
 ```sql
-id              INTEGER PRIMARY KEY DEFAULT 1
+id              INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1)
 voting_end_time TIMESTAMPTZ NOT NULL
+voting_status   TEXT NOT NULL DEFAULT 'open'
+                  CHECK (voting_status IN ('open', 'paused', 'stopped'))
 ```
 
 ## API Routes
@@ -136,8 +128,7 @@ voting_end_time TIMESTAMPTZ NOT NULL
 |--------|-------|------|-------------|
 | POST | `/api/auth/login` | Public | Admin password sign-in |
 | POST | `/api/auth/logout` | Session | Sign out admin or student cookie |
-| POST | `/api/auth/student/enter` | Public | Allowlist + send OTP |
-| POST | `/api/auth/student/verify` | Public | Verify OTP + set voting cookie |
+| POST | `/api/auth/student/enter` | Public | Allowlist check + set voting cookie |
 | GET | `/api/projects` | Public | List projects with vote counts |
 | POST | `/api/projects` | Admin | Create project |
 | GET | `/api/projects/[id]` | Public | Get one project |
@@ -146,11 +137,12 @@ voting_end_time TIMESTAMPTZ NOT NULL
 | POST | `/api/votes` | Student cookie | Cast/change vote (atomic) |
 | DELETE | `/api/votes` | Student cookie | Remove vote |
 | GET | `/api/admin/leaderboard` | Admin | Sorted projects + stats |
-| GET | `/api/admin/settings` | Admin | Read deadline |
-| PUT | `/api/admin/settings` | Admin | Update deadline |
+| GET | `/api/admin/settings` | Admin | Read deadline + voting status |
+| PUT | `/api/admin/settings` | Admin | Update deadline and/or voting status |
 | GET | `/api/admin/voters` | Admin | List eligible emails |
 | POST | `/api/admin/voters` | Admin | Add one email |
 | POST | `/api/admin/voters/import` | Admin | Import Excel/CSV emails |
+| DELETE | `/api/admin/voters` | Admin | Remove all eligible emails (votes cascade) |
 | DELETE | `/api/admin/voters/[id]` | Admin | Remove email |
 | GET | `/api/competition` | Public | Gallery payload |
 | GET | `/api/me` | Admin or student cookie | Current actor |
@@ -161,7 +153,6 @@ voting_end_time TIMESTAMPTZ NOT NULL
 - Only admins write projects and eligible emails
 - Votes written via server APIs / RPC using the student cookie
 - Deadline validated server-side
-- OTP stored hashed; send + verify rate-limited
 - Admins identified by `role = admin` in profiles
 
 ## Pages
@@ -169,8 +160,8 @@ voting_end_time TIMESTAMPTZ NOT NULL
 | Route | Access |
 |-------|--------|
 | `/` | Redirects to `/vote` |
-| `/vote` | Public student email + OTP |
-| `/gallery` | Student cookie (gallery may still render public projects; vote requires cookie) |
+| `/vote` | Public listed-email entry |
+| `/gallery` | Student voting cookie only (admins use `/admin`; no admin nav) |
 | `/login` | Admin password sign-in |
 | `/admin` | Admin only |
 | `/register` | Removed from product |
@@ -182,7 +173,7 @@ voting_end_time TIMESTAMPTZ NOT NULL
 - Page load < 2s on 3G
 - Lighthouse Performance > 90
 - One-vote constraint enforced at DB level
-- Unlisted emails never receive an OTP
+- Unlisted emails cannot enter voting
 - Zero unauthorized admin access via RLS
 
 ## Phase Roadmap
@@ -197,6 +188,6 @@ voting_end_time TIMESTAMPTZ NOT NULL
 
 - Overview, leaderboard, deadline, delete
 
-### Phase 2 — Admin-owned contest + OTP voting
+### Phase 2 — Admin-owned contest + listed-email voting
 
-- Docs, schema, admin APIs, student OTP APIs, admin Projects + Voters UI
+- Docs, schema, admin APIs, student enter/vote APIs, admin Projects + Voters UI

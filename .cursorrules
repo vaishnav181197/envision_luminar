@@ -1,6 +1,6 @@
-# ELEVATE Project Rules
+# Envision Project Rules
 
-You are working on ELEVATE, a Student UI Design Competition platform. Follow these rules strictly.
+You are working on Envision, a Student UI Design Competition platform. Follow these rules strictly.
 
 ## Architecture
 
@@ -81,7 +81,7 @@ When making significant changes, update:
 
 ## Voting Domain Rules (Phase 2+)
 
-- Enforce one vote per user at database level (`UNIQUE(user_id)`)
+- Enforce one vote per eligible student at database level (`UNIQUE(eligible_student_id)`)
 - Validate deadline server-side on all write operations
 - Vote changes must be atomic (delete old + insert new in transaction)
 - Use optimistic UI with rollback on API failure

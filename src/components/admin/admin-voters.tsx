@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Mail, Trash2, Upload } from "lucide-react";
+import { Mail, RotateCcw, Trash2, Upload } from "lucide-react";
 
+import { ResetVotersDialog } from "@/components/admin/reset-voters-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -26,6 +27,7 @@ export interface AdminVotersProps {
     file: File,
   ) => Promise<{ success: boolean; error?: string; imported?: number; found?: number }>;
   onDelete: (id: string, email: string) => Promise<{ success: boolean; error?: string }>;
+  onResetAll: () => Promise<{ success: boolean; error?: string; deleted?: number }>;
 }
 
 export function AdminVoters({
@@ -34,6 +36,7 @@ export function AdminVoters({
   onAdd,
   onImport,
   onDelete,
+  onResetAll,
 }: AdminVotersProps) {
   const [email, setEmail] = useState("");
   const [addError, setAddError] = useState<string | null>(null);
@@ -42,6 +45,8 @@ export function AdminVoters({
   const [adding, setAdding] = useState(false);
   const [importing, setImporting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [resetOpen, setResetOpen] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   const handleAdd = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -83,16 +88,38 @@ export function AdminVoters({
     setDeletingId(null);
   };
 
+  const handleResetConfirm = async () => {
+    setResetting(true);
+    const result = await onResetAll();
+    setResetting(false);
+    if (result.success) {
+      setResetOpen(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-text-primary">
-          Voters
-        </h1>
-        <p className="mt-1 text-sm text-text-secondary">
-          Register the admission emails that may enter voting. Students prove
-          inbox access with a 6-digit code.
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-text-primary">
+            Voters
+          </h1>
+          <p className="mt-1 text-sm text-text-secondary">
+            Register the admission emails that may enter voting. A listed email can
+            open the gallery and place one vote.
+          </p>
+        </div>
+        {voters.length > 0 && (
+          <Button
+            type="button"
+            variant="destructive"
+            leftIcon={<RotateCcw className="h-4 w-4" />}
+            disabled={loading || resetting}
+            onClick={() => setResetOpen(true)}
+          >
+            Reset all voters
+          </Button>
+        )}
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -221,6 +248,14 @@ export function AdminVoters({
           </CardContent>
         </Card>
       )}
+
+      <ResetVotersDialog
+        open={resetOpen}
+        onClose={() => setResetOpen(false)}
+        voterCount={voters.length}
+        loading={resetting}
+        onConfirm={() => void handleResetConfirm()}
+      />
     </div>
   );
 }

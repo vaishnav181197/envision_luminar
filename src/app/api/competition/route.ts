@@ -1,7 +1,10 @@
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { getStudentSession } from "@/lib/auth/student-session";
-import { getCompetitionSettings, isCompetitionOpen } from "@/lib/auth/session";
-import { markWinners } from "@/lib/competition/helpers";
+import { getCompetitionSettings } from "@/lib/auth/session";
+import {
+  isCompetitionEnded,
+  markWinners,
+} from "@/lib/competition/helpers";
 import {
   fetchProjectsWithVotes,
   fetchStudentVote,
@@ -19,11 +22,10 @@ export async function GET() {
       return jsonError("Competition settings not found", 500);
     }
 
-    const isOpen = isCompetitionOpen(settings.votingEndTime);
     const userVote = student ? await fetchStudentVote(student.id) : null;
 
     return jsonOk({
-      projects: markWinners(projects, isOpen),
+      projects: markWinners(projects, isCompetitionEnded(settings)),
       settings,
       userVote,
     });

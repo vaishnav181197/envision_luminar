@@ -2,7 +2,7 @@
 
 ## Philosophy
 
-Envision is a **Student UI Design Competition Platform**. Administrators publish the competing UIs and run the contest. Students enter with a pre-registered admission email, verify a 6-digit OTP, browse the gallery, and cast exactly one changeable vote. The platform prioritizes:
+Envision is a **Student UI Design Competition Platform**. Administrators publish the competing UIs and run the contest. Students enter with a pre-registered admission email, browse the gallery, and cast exactly one changeable vote. The platform prioritizes:
 
 - **Performance first** — Fast page loads, minimal JavaScript, excellent Core Web Vitals
 - **Design consistency** — Every UI element follows the living design system
@@ -18,8 +18,7 @@ Envision is a **Student UI Design Competition Platform**. Administrators publish
 | Styling | Tailwind CSS v4 |
 | Database | Supabase PostgreSQL + RLS |
 | Admin auth | Supabase Auth (email/password) |
-| Student auth | Allowlist + hashed OTP + signed cookie |
-| Mailer | Resend (not Supabase Auth OTP); console fallback in development |
+| Student auth | Allowlist + signed cookie |
 | Icons | lucide-react (tree-shaken) |
 | Hosting | Vercel Hobby Tier |
 
@@ -27,33 +26,30 @@ Envision is a **Student UI Design Competition Platform**. Administrators publish
 
 ```
 src/
-├── app/                    # Next.js App Router pages
-│   ├── design-system/      # Living style guide dashboard
-│   ├── gallery/            # Project gallery (student voting session)
-│   ├── admin/              # Admin dashboard (live APIs)
-│   ├── vote/               # Student email + OTP entry
-│   ├── login/              # Admin password sign-in
-│   ├── layout.tsx          # Root layout with providers
-│   ├── page.tsx            # Redirects to /vote
-│   └── globals.css         # Design tokens + Tailwind theme
+├── app/
+│   ├── (marketing)/        # Landing, /vote, /login, /register→vote
+│   ├── (platform)/         # /gallery, /admin, /design-system
+│   ├── api/                # Admin + student + competition APIs
+│   ├── layout.tsx
+│   └── globals.css
 ├── components/
-│   ├── ui/                 # Reusable design system components
-│   ├── admin/              # Admin-specific dashboard components
-│   ├── layout/             # Header, Sidebar, AppProviders
-│   └── design-system/      # Style guide showcase sections
+│   ├── ui/                 # Design system
+│   ├── admin/              # Dashboard components
+│   ├── landing/            # Marketing landing sections
+│   ├── layout/             # Header, PlatformShell, providers
+│   └── design-system/
 ├── contexts/
-│   └── competition-context.tsx  # Shared live competition state
+│   └── competition-context.tsx
 ├── hooks/
-│   ├── use-auth.ts              # Admin session
-│   ├── use-admin-dashboard.ts   # Admin session + leaderboard APIs
-│   └── use-admin-competition.ts # Re-exports admin dashboard hook
 ├── lib/
-│   ├── supabase/           # Client, server, middleware utilities
-│   ├── auth/               # Admin + student session helpers
-│   ├── constants/          # Mock data, app constants
-│   └── utils/              # cn(), helpers
-├── types/                  # TypeScript definitions
-└── middleware.ts           # Supabase admin session + student cookie
+│   ├── supabase/
+│   ├── auth/               # Admin + student cookie helpers
+│   ├── competition/
+│   ├── voters/
+│   ├── storage/
+│   └── utils/
+├── types/
+└── middleware.ts           # Admin Auth refresh + /admin gate + voter cookie redirects
 ```
 
 ## Component Architecture
@@ -73,12 +69,12 @@ src/
 - **Overlay**: Modal, Dialog, Drawer, Popover, Tooltip
 - **Navigation**: Tabs, Accordion, Breadcrumbs, Pagination, Sidebar, Header
 - **Domain**: ProjectCard, UpvoteButton (voting-specific)
-- **Admin**: LeaderboardTable, DeadlineSettingsForm, DeleteProjectDialog, AdminLayout, CompetitionStatusBanner, project form, voter list
+- **Admin**: LeaderboardTable, DeadlineSettingsForm, VotingControlsForm, DeleteProjectDialog, AdminLayout, CompetitionStatusBanner, project form, voter list
 
 ## Roles and sessions
 
 - **Admin** signs in at `/login` with email/password. Middleware and `GET /api/admin/session` guard `/admin`.
-- **Student** is not a Supabase Auth user. They complete `/vote` (email then OTP). The server sets a signed httpOnly voting cookie.
+- **Student** is not a Supabase Auth user. They submit a listed email at `/vote`. The server sets a signed httpOnly voting cookie.
 - `/admin/login` redirects to `/login`.
 - `/register` is not part of the product.
 
@@ -89,17 +85,17 @@ The admin UI at `/admin` loads live data from admin APIs:
 - **Overview** — stats row + top leaderboard preview, winner callout after the deadline
 - **Projects** — create, edit, and delete competing UIs (`POST/PUT/DELETE /api/projects`)
 - **Voters** — add one email, import Excel/CSV, list, and remove (`/api/admin/voters`)
-- **Settings** — deadline management (`GET/PUT /api/admin/settings`)
+- **Settings** — deadline plus pause/stop/resume (`GET/PUT /api/admin/settings`, `voting_status`)
+- Winner callouts appear after stop or when the deadline passes (not while paused)
 
 After a project, voter, or deadline change, the dashboard refreshes the admin leaderboard and the shared `CompetitionProvider`.
 
 ## Student voting
 
-1. `POST /api/auth/student/enter` — allowlist check, store hashed OTP, send email
-2. `POST /api/auth/student/verify` — check code, set voting cookie
-3. Gallery + `POST /api/votes` — one vote per `eligible_student_id`, change is atomic
+1. `POST /api/auth/student/enter` — allowlist check, set voting cookie
+2. Student-only `/gallery` + `POST /api/votes` — one vote per `eligible_student_id`, change is atomic
 
-Do not use `supabase.auth.signInWithOtp`. Mailer uses `RESEND_API_KEY` (HTML + text OTP email). Without a key, development logs the code to the server console. Cookie signing uses `STUDENT_SESSION_SECRET`.
+Unlisted emails are rejected and do not receive a cookie. Cookie signing uses `STUDENT_SESSION_SECRET` (required in production; no public-key fallback). `/gallery` requires a valid voting cookie and rejects admin Auth sessions (admins use `/admin`).
 
 ## Supabase Integration Strategy
 
@@ -158,6 +154,6 @@ npm run typecheck # TypeScript check
 
 **Phase 1.5 (Complete):** Admin dashboard UI (overview, delete, deadline).
 
-**Phase 2 (Implemented):** Admin-owned projects, eligible voter list, student OTP entry, and vote-by-cookie. Live schema includes `003` (voters/OTP/votes), `004` (thumbnail bucket), and `005` (author/batch).
+**Phase 2 (Implemented):** Admin-owned projects, eligible voter list, student email entry (allowlist → signed cookie), vote-by-cookie, pause/stop. Live schema includes `003` (voters/votes), `004` (thumbnail bucket), `005` (author/batch), `006` (voting_status), `007` (drop unused OTP challenges), and `008` (cast_vote + profile role hardening).
 
-Required env (Goal 3+): `RESEND_API_KEY`, optional `RESEND_FROM_EMAIL`, and `STUDENT_SESSION_SECRET` for the voting cookie. Without Resend, OTP codes log to the server console in development (`[otp:console] email → code`). Use `node scripts/ensure-otp-env.mjs` to seed missing secret/from values.
+Required env: `STUDENT_SESSION_SECRET` (required in production), `SUPABASE_SERVICE_ROLE_KEY`, and Supabase public URL/anon key.

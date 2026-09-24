@@ -5,13 +5,13 @@ import { fetchStudentVote } from "@/lib/competition/queries";
 
 export async function GET() {
   const auth = await requireAuth();
-  if (!auth.error && auth.user && auth.profile) {
+  if (!auth.error && auth.user && auth.profile?.role === "admin") {
     return jsonOk({
       user: {
         id: auth.user.id,
         email: auth.profile.email,
         name: auth.profile.display_name ?? auth.profile.email,
-        role: auth.profile.role,
+        role: "admin" as const,
         batch: auth.profile.batch,
       },
     });

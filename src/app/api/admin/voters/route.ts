@@ -77,3 +77,26 @@ export async function POST(request: Request) {
     201,
   );
 }
+
+export async function DELETE() {
+  const auth = await requireAdmin();
+  if (auth.error) {
+    return jsonError(auth.error, auth.error === "Forbidden" ? 403 : 401);
+  }
+
+  const supabase = await createClient();
+  const { data, error, count } = await supabase
+    .from("eligible_students")
+    .delete({ count: "exact" })
+    .neq("id", "00000000-0000-0000-0000-000000000000")
+    .select("id");
+
+  if (error) {
+    return jsonError(error.message, 500);
+  }
+
+  return jsonOk({
+    success: true,
+    deleted: count ?? data?.length ?? 0,
+  });
+}
