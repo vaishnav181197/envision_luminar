@@ -30,7 +30,8 @@ Envision hosts an institute UI design competition. **Administrators publish ever
 - Admin pre-loads every eligible admission email (unique).
 - Student submits that email on `/vote`.
 - If the email is **not** on the list, the API returns “this email is not registered for voting” and sets no cookie.
-- If the email **is** listed, the server sets a signed httpOnly **voting cookie**. Students are not created in `auth.users`.
+- If the email **is** listed, the server sets a signed httpOnly **browser session** voting cookie on the enter response (`Secure` only when the request is HTTPS so HTTP LAN mobile testing still works). Students are not created in `auth.users`.
+- Closing the browser clears the voting cookie; the next visit requires `/vote` again. Explicit Log out also clears it. Some mobile browsers that restore tabs may restore session cookies.
 - One listed email can hold one active vote.
 
 ### 4.3. Project Submission (Admin only)
@@ -68,6 +69,7 @@ Protected `/admin` with:
 - **Overview** — stats and top projects / winner after close
 - **Projects** — create, edit, delete competing UIs
 - **Voters** — add/import/remove eligible emails
+- **Participation** — who has voted vs who has not (email, status, project, voted at)
 - **Settings** — voting deadline, pause, and stop
 - Leaderboard sorted by vote count descending
 
@@ -121,6 +123,6 @@ Protected `/admin` with:
 ## 8. Implementation Notes
 
 1. Admin Auth stays on Supabase email/password.
-2. Student session is a signed cookie after the listed email is accepted.
-3. Cookie signing uses `STUDENT_SESSION_SECRET`.
+2. Student session is a signed **browser session** cookie after the listed email is accepted (cleared when the browser closes).
+3. Cookie signing uses `STUDENT_SESSION_SECRET`. The enter API attaches `Set-Cookie` on the JSON response; `Secure` follows HTTPS, not merely `NODE_ENV`.
 4. Build admin project/voter APIs first, then student enter/vote APIs, then admin UI.

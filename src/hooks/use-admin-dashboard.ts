@@ -16,8 +16,15 @@ import type {
   CompetitionSettings,
   EligibleStudent,
   LeaderboardRow,
+  VoterParticipationRow,
   VotingStatus,
 } from "@/types/admin";
+
+const EMPTY_PARTICIPATION_COUNTS = {
+  total: 0,
+  voted: 0,
+  notVoted: 0,
+};
 
 const EMPTY_STATS: AdminStats = {
   totalSubmissions: 0,
@@ -88,6 +95,15 @@ export function useAdminDashboard() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [voters, setVoters] = useState<EligibleStudent[]>([]);
+  const [participationVoted, setParticipationVoted] = useState<
+    VoterParticipationRow[]
+  >([]);
+  const [participationNotVoted, setParticipationNotVoted] = useState<
+    VoterParticipationRow[]
+  >([]);
+  const [participationCounts, setParticipationCounts] = useState(
+    EMPTY_PARTICIPATION_COUNTS,
+  );
   const [stats, setStats] = useState<AdminStats>(EMPTY_STATS);
   const [settings, setSettings] = useState<CompetitionSettings>(DEFAULT_SETTINGS);
   const [isLoading, setIsLoading] = useState(true);
@@ -155,6 +171,26 @@ export function useAdminDashboard() {
     return true;
   }, [redirectIfUnauthorized]);
 
+  const loadParticipation = useCallback(async (): Promise<boolean> => {
+    const res = await fetch("/api/admin/voters/participation");
+    if (redirectIfUnauthorized(res.status)) {
+      return false;
+    }
+    if (!res.ok) {
+      throw new Error(await readError(res, "Failed to load participation"));
+    }
+
+    const data = (await res.json()) as {
+      voted: VoterParticipationRow[];
+      notVoted: VoterParticipationRow[];
+      counts: { total: number; voted: number; notVoted: number };
+    };
+    setParticipationVoted(data.voted ?? []);
+    setParticipationNotVoted(data.notVoted ?? []);
+    setParticipationCounts(data.counts ?? EMPTY_PARTICIPATION_COUNTS);
+    return true;
+  }, [redirectIfUnauthorized]);
+
   const refresh = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -171,7 +207,12 @@ export function useAdminDashboard() {
 
       const session = (await sessionRes.json()) as SessionResponse;
       setUser(session.user);
-      await Promise.all([loadLeaderboard(), loadProjects(), loadVoters()]);
+      await Promise.all([
+        loadLeaderboard(),
+        loadProjects(),
+        loadVoters(),
+        loadParticipation(),
+      ]);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to load admin dashboard",
@@ -179,7 +220,13 @@ export function useAdminDashboard() {
     } finally {
       setIsLoading(false);
     }
-  }, [loadLeaderboard, loadProjects, loadVoters, redirectIfUnauthorized]);
+  }, [
+    loadLeaderboard,
+    loadParticipation,
+    loadProjects,
+    loadVoters,
+    redirectIfUnauthorized,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -201,17 +248,20 @@ export function useAdminDashboard() {
         if (cancelled) return;
         setUser(session.user);
 
-        const [leaderboardRes, projectsRes, votersRes] = await Promise.all([
-          fetch("/api/admin/leaderboard"),
-          fetch("/api/projects"),
-          fetch("/api/admin/voters"),
-        ]);
+        const [leaderboardRes, projectsRes, votersRes, participationRes] =
+          await Promise.all([
+            fetch("/api/admin/leaderboard"),
+            fetch("/api/projects"),
+            fetch("/api/admin/voters"),
+            fetch("/api/admin/voters/participation"),
+          ]);
 
         if (cancelled) return;
         if (
           redirectIfUnauthorized(leaderboardRes.status) ||
           redirectIfUnauthorized(projectsRes.status) ||
-          redirectIfUnauthorized(votersRes.status)
+          redirectIfUnauthorized(votersRes.status) ||
+          redirectIfUnauthorized(participationRes.status)
         ) {
           return;
         }
@@ -227,10 +277,20 @@ export function useAdminDashboard() {
         if (!votersRes.ok) {
           throw new Error(await readError(votersRes, "Failed to load voters"));
         }
+        if (!participationRes.ok) {
+          throw new Error(
+            await readError(participationRes, "Failed to load participation"),
+          );
+        }
 
         const leaderboardData = (await leaderboardRes.json()) as LeaderboardResponse;
         const projectsData = (await projectsRes.json()) as { projects: Project[] };
         const votersData = (await votersRes.json()) as { voters: EligibleStudent[] };
+        const participationData = (await participationRes.json()) as {
+          voted: VoterParticipationRow[];
+          notVoted: VoterParticipationRow[];
+          counts: { total: number; voted: number; notVoted: number };
+        };
 
         if (cancelled) return;
         setLeaderboard(leaderboardData.leaderboard);
@@ -238,6 +298,11 @@ export function useAdminDashboard() {
         setSettings(leaderboardData.settings);
         setProjects(projectsData.projects ?? []);
         setVoters(votersData.voters ?? []);
+        setParticipationVoted(participationData.voted ?? []);
+        setParticipationNotVoted(participationData.notVoted ?? []);
+        setParticipationCounts(
+          participationData.counts ?? EMPTY_PARTICIPATION_COUNTS,
+        );
       } catch (err) {
         if (!cancelled) {
           setError(
@@ -361,10 +426,10 @@ export function useAdminDashboard() {
         };
       }
 
-      await loadVoters();
+      await Promise.all([loadVoters(), loadParticipation()]);
       return { success: true };
     },
-    [loadVoters, redirectIfUnauthorized],
+    [loadParticipation, loadVoters, redirectIfUnauthorized],
   );
 
   const importVoters = useCallback(
@@ -401,14 +466,14 @@ export function useAdminDashboard() {
         };
       }
 
-      await loadVoters();
+      await Promise.all([loadVoters(), loadParticipation()]);
       return {
         success: true,
         imported: data.imported,
         found: data.found,
       };
     },
-    [loadVoters, redirectIfUnauthorized],
+    [loadParticipation, loadVoters, redirectIfUnauthorized],
   );
 
   const deleteVoter = useCallback(
@@ -425,9 +490,10 @@ export function useAdminDashboard() {
       }
 
       setVoters((prev) => prev.filter((voter) => voter.id !== id));
+      await loadParticipation();
       return { success: true };
     },
-    [redirectIfUnauthorized],
+    [loadParticipation, redirectIfUnauthorized],
   );
 
   const resetAllVoters = useCallback(async (): Promise<{
@@ -448,6 +514,9 @@ export function useAdminDashboard() {
 
     const data = (await res.json()) as { deleted?: number };
     setVoters([]);
+    setParticipationVoted([]);
+    setParticipationNotVoted([]);
+    setParticipationCounts(EMPTY_PARTICIPATION_COUNTS);
     await Promise.all([loadLeaderboard(), refreshCompetition()]);
     return { success: true, deleted: data.deleted ?? 0 };
   }, [loadLeaderboard, redirectIfUnauthorized, refreshCompetition]);
@@ -529,6 +598,9 @@ export function useAdminDashboard() {
     leaderboard,
     projects,
     voters,
+    participationVoted,
+    participationNotVoted,
+    participationCounts,
     stats,
     settings,
     isOpen,

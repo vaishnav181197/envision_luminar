@@ -15,18 +15,27 @@ export function VoteEntryForm() {
   const enterVoting = async () => {
     setLoading(true);
     setError(null);
-    const res = await fetch("/api/auth/student/enter", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
-    });
-    const data = (await res.json()) as { error?: string; redirectTo?: string };
-    if (!res.ok) {
+    try {
+      const res = await fetch("/api/auth/student/enter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+        credentials: "same-origin",
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        redirectTo?: string;
+      };
+      if (!res.ok) {
+        setError(data.error ?? "Unable to enter voting. Check the email and try again.");
+        setLoading(false);
+        return;
+      }
+      window.location.assign(data.redirectTo ?? "/gallery");
+    } catch {
+      setError("Network error. Check your connection and try again.");
       setLoading(false);
-      setError(data.error ?? "Unable to enter voting");
-      return;
     }
-    window.location.assign(data.redirectTo ?? "/gallery");
   };
 
   return (

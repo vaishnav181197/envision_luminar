@@ -27,7 +27,7 @@ export function Header() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const { isOpen, settings } = useCompetition();
-  const { isAdmin, isVoter, loading } = useAuth();
+  const { isAdmin, isVoter, loading, voter } = useAuth();
   const [loggingOut, setLoggingOut] = useState(false);
   const isAdminRoute = pathname.startsWith("/admin");
   const isGalleryRoute = pathname.startsWith("/gallery");
@@ -38,6 +38,7 @@ export function Header() {
   const showEnterVoting =
     !loading && !isAdmin && !isVoter && !isAdminRoute && isOpen;
   const showStudentLogout = !loading && isVoter && !isAdmin;
+  const voterEmail = showStudentLogout ? voter?.email : null;
 
   const handleStudentLogout = async () => {
     setLoggingOut(true);
@@ -105,6 +106,14 @@ export function Header() {
               Enter voting
             </Link>
           )}
+          {voterEmail && (
+            <p
+              className="hidden max-w-[12rem] truncate text-sm text-text-secondary sm:block lg:max-w-xs"
+              title={voterEmail}
+            >
+              {voterEmail}
+            </p>
+          )}
           {showStudentLogout && (
             <Button
               variant="outline"
@@ -163,6 +172,11 @@ export function Header() {
               <Vote className="h-4 w-4" />
               Enter voting
             </Link>
+          )}
+          {voterEmail && (
+            <p className="truncate px-3 py-2 text-sm text-text-secondary">
+              Voting as {voterEmail}
+            </p>
           )}
           {showStudentLogout && (
             <Button

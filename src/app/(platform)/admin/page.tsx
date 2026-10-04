@@ -5,6 +5,7 @@ import { useCallback, useState } from "react";
 import {
   AdminLayout,
   AdminOverview,
+  AdminParticipation,
   AdminProjects,
   AdminSettingsPanel,
   AdminVoters,
@@ -24,6 +25,9 @@ export default function AdminPage() {
     leaderboard,
     projects,
     voters,
+    participationVoted,
+    participationNotVoted,
+    participationCounts,
     stats,
     isOpen,
     isDeadlineNear,
@@ -314,6 +318,15 @@ export default function AdminPage() {
           onImport={handleImportVoters}
           onDelete={handleDeleteVoter}
           onResetAll={handleResetAllVoters}
+        />
+      )}
+
+      {activeTab === "participation" && (
+        <AdminParticipation
+          voted={participationVoted}
+          notVoted={participationNotVoted}
+          counts={participationCounts}
+          loading={isLoading}
         />
       )}
 

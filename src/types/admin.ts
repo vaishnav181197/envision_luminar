@@ -12,12 +12,37 @@ export interface LeaderboardRow {
   isWinner?: boolean;
 }
 
-export type AdminTab = "overview" | "projects" | "voters" | "settings";
+export type AdminTab =
+  | "overview"
+  | "projects"
+  | "voters"
+  | "participation"
+  | "settings";
 
 export interface EligibleStudent {
   id: string;
   email: string;
   createdAt: string;
+}
+
+export interface VoterParticipationRow {
+  id: string;
+  email: string;
+  registeredAt: string;
+  hasVoted: boolean;
+  projectId?: string;
+  projectTitle?: string;
+  votedAt?: string;
+}
+
+export interface VoterParticipationSummary {
+  voted: VoterParticipationRow[];
+  notVoted: VoterParticipationRow[];
+  counts: {
+    total: number;
+    voted: number;
+    notVoted: number;
+  };
 }
 
 export interface CompetitionSettings {

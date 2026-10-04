@@ -5,6 +5,7 @@ export { AdminSettingsPanel } from "./admin-settings-panel";
 export { AdminStatsRow } from "./admin-stats";
 export { AdminSubmissions } from "./admin-submissions";
 export { AdminVoters } from "./admin-voters";
+export { AdminParticipation } from "./admin-participation";
 export { VotingControlsForm } from "./voting-controls-form";
 export {
   CompetitionClosedBanner,

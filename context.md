@@ -74,7 +74,7 @@ src/
 ## Roles and sessions
 
 - **Admin** signs in at `/login` with email/password. Middleware and `GET /api/admin/session` guard `/admin`.
-- **Student** is not a Supabase Auth user. They submit a listed email at `/vote`. The server sets a signed httpOnly voting cookie.
+- **Student** is not a Supabase Auth user. They submit a listed email at `/vote`. The server sets a signed httpOnly **browser session** voting cookie (`envision_voter`) on the enter response.
 - `/admin/login` redirects to `/login`.
 - `/register` is not part of the product.
 
@@ -85,6 +85,7 @@ The admin UI at `/admin` loads live data from admin APIs:
 - **Overview** — stats row + top leaderboard preview, winner callout after the deadline
 - **Projects** — create, edit, and delete competing UIs (`POST/PUT/DELETE /api/projects`)
 - **Voters** — add one email, import Excel/CSV, list, and remove (`/api/admin/voters`)
+- **Participation** — voted / not voted lists (`GET /api/admin/voters/participation`)
 - **Settings** — deadline plus pause/stop/resume (`GET/PUT /api/admin/settings`, `voting_status`)
 - Winner callouts appear after stop or when the deadline passes (not while paused)
 
@@ -92,10 +93,10 @@ After a project, voter, or deadline change, the dashboard refreshes the admin le
 
 ## Student voting
 
-1. `POST /api/auth/student/enter` — allowlist check, set voting cookie
+1. `POST /api/auth/student/enter` — allowlist check; attach `envision_voter` on the same `NextResponse` (`Secure` only when the request is HTTPS; no `maxAge` so the cookie is a browser session cookie)
 2. Student-only `/gallery` + `POST /api/votes` — one vote per `eligible_student_id`, change is atomic
 
-Unlisted emails are rejected and do not receive a cookie. Cookie signing uses `STUDENT_SESSION_SECRET` (required in production; no public-key fallback). `/gallery` requires a valid voting cookie and rejects admin Auth sessions (admins use `/admin`).
+Unlisted emails are rejected and do not receive a cookie. Cookie signing uses `STUDENT_SESSION_SECRET` (required in production; no public-key fallback). `/gallery` requires a valid voting cookie and rejects admin Auth sessions (admins use `/admin`). Closing the browser clears the session cookie (some mobile tab-restore browsers may keep it); Log out always clears it.
 
 ## Supabase Integration Strategy
 

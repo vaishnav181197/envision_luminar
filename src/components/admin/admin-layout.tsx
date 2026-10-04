@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ClipboardList,
   FolderKanban,
   LayoutDashboard,
   LogOut,
@@ -22,6 +23,7 @@ const navItems: { id: AdminTab; label: string; icon: typeof LayoutDashboard }[] 
   { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "projects", label: "Projects", icon: FolderKanban },
   { id: "voters", label: "Voters", icon: Mail },
+  { id: "participation", label: "Participation", icon: ClipboardList },
   { id: "settings", label: "Settings", icon: Settings },
 ];
 

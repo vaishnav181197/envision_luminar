@@ -1,13 +1,20 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
+import type { NextResponse } from "next/server";
 
 export const STUDENT_COOKIE = "envision_voter";
-const MAX_AGE_SECONDS = 60 * 60 * 12;
+/** Absolute expiry encoded in the signed payload (browser session may end sooner). */
+const SESSION_TTL_MS = 60 * 60 * 12 * 1000;
 
 export interface StudentSession {
   id: string;
   email: string;
   exp: number;
+}
+
+export interface StudentCookieOptions {
+  /** When true, cookie is marked Secure (HTTPS only). */
+  secure: boolean;
 }
 
 function secret(): string {
@@ -62,6 +69,37 @@ export function decodeStudentSession(token: string): StudentSession | null {
   }
 }
 
+/** Prefer forwarded proto (Vercel/proxies), then the request URL. */
+export function requestIsHttps(request: Request): boolean {
+  const forwarded = request.headers.get("x-forwarded-proto");
+  if (forwarded) {
+    return forwarded.split(",")[0]?.trim().toLowerCase() === "https";
+  }
+  try {
+    return new URL(request.url).protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function buildSessionValue(student: { id: string; email: string }): string {
+  return encodeStudentSession({
+    id: student.id,
+    email: student.email,
+    exp: Date.now() + SESSION_TTL_MS,
+  });
+}
+
+/** Browser session cookie: no maxAge/expires so it clears when the browser closes. */
+function cookieBaseOptions(secure: boolean) {
+  return {
+    httpOnly: true,
+    sameSite: "lax" as const,
+    secure,
+    path: "/",
+  };
+}
+
 export async function getStudentSession(): Promise<StudentSession | null> {
   const store = await cookies();
   const raw = store.get(STUDENT_COOKIE)?.value;
@@ -80,25 +118,40 @@ export async function requireStudentSession(): Promise<
   return { session, error: null };
 }
 
+/** Attach voting cookie on the same NextResponse that is returned to the client. */
+export function applyStudentSessionCookie(
+  response: NextResponse,
+  student: { id: string; email: string },
+  options: StudentCookieOptions,
+): void {
+  response.cookies.set(
+    STUDENT_COOKIE,
+    buildSessionValue(student),
+    cookieBaseOptions(options.secure),
+  );
+}
+
 export async function setStudentSessionCookie(
   student: { id: string; email: string },
+  options?: Partial<StudentCookieOptions>,
 ): Promise<void> {
   const store = await cookies();
-  const value = encodeStudentSession({
-    id: student.id,
-    email: student.email,
-    exp: Date.now() + MAX_AGE_SECONDS * 1000,
-  });
-  store.set(STUDENT_COOKIE, value, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: MAX_AGE_SECONDS,
+  store.set(STUDENT_COOKIE, buildSessionValue(student), {
+    ...cookieBaseOptions(options?.secure ?? process.env.NODE_ENV === "production"),
   });
 }
 
 export async function clearStudentSessionCookie(): Promise<void> {
   const store = await cookies();
   store.delete(STUDENT_COOKIE);
+}
+
+export function clearStudentSessionCookieOnResponse(response: NextResponse): void {
+  response.cookies.set(STUDENT_COOKIE, "", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 0,
+  });
 }

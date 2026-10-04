@@ -36,8 +36,9 @@ A web platform hosting a UI design competition for institute students. **Admins 
 
 1. Student submits email
 2. If not on `eligible_students` → error, no cookie
-3. If listed → signed httpOnly voting cookie
+3. If listed → signed httpOnly **browser session** voting cookie on the enter response (`Secure` only on HTTPS; no `maxAge`)
 4. That email can hold one active vote (`UNIQUE(eligible_student_id)`)
+5. Closing the browser clears the cookie; next visit requires `/vote` again
 
 ### Time-Bound Competition
 
@@ -140,6 +141,7 @@ voting_status   TEXT NOT NULL DEFAULT 'open'
 | GET | `/api/admin/settings` | Admin | Read deadline + voting status |
 | PUT | `/api/admin/settings` | Admin | Update deadline and/or voting status |
 | GET | `/api/admin/voters` | Admin | List eligible emails |
+| GET | `/api/admin/voters/participation` | Admin | Voted / not-voted lists + counts |
 | POST | `/api/admin/voters` | Admin | Add one email |
 | POST | `/api/admin/voters/import` | Admin | Import Excel/CSV emails |
 | DELETE | `/api/admin/voters` | Admin | Remove all eligible emails (votes cascade) |
@@ -190,4 +192,4 @@ voting_status   TEXT NOT NULL DEFAULT 'open'
 
 ### Phase 2 — Admin-owned contest + listed-email voting
 
-- Docs, schema, admin APIs, student enter/vote APIs, admin Projects + Voters UI
+- Docs, schema, admin APIs, student enter/vote APIs, admin Projects + Voters + Participation UI

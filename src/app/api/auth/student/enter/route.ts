@@ -1,5 +1,10 @@
-import { jsonError, jsonOk } from "@/lib/api/response";
-import { setStudentSessionCookie } from "@/lib/auth/student-session";
+import { NextResponse } from "next/server";
+
+import { jsonError } from "@/lib/api/response";
+import {
+  applyStudentSessionCookie,
+  requestIsHttps,
+} from "@/lib/auth/student-session";
 import { requireCompetitionOpen } from "@/lib/auth/session";
 import { createServiceClient } from "@/lib/supabase/service";
 import { isValidEmail, normalizeEmail } from "@/lib/voters/parse-emails";
@@ -45,6 +50,14 @@ export async function POST(request: Request) {
     return jsonError("This email is not registered for voting.", 403);
   }
 
-  await setStudentSessionCookie(student);
-  return jsonOk({ ok: true, redirectTo: "/gallery" });
+  const response = NextResponse.json({
+    ok: true,
+    redirectTo: "/gallery",
+  });
+
+  applyStudentSessionCookie(response, student, {
+    secure: requestIsHttps(request),
+  });
+
+  return response;
 }

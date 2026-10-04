@@ -29,7 +29,7 @@ export default function GalleryPage() {
     castVote,
     removeVote,
   } = useCompetition();
-  const { isVoter, loading: authLoading } = useAuth();
+  const { isVoter, loading: authLoading, voter } = useAuth();
   const { addToast } = useToast();
   const router = useRouter();
   const [votingProjectId, setVotingProjectId] = useState<string | null>(null);
@@ -92,9 +92,13 @@ export default function GalleryPage() {
             Browse the published UI entries and cast one vote for the most
             creative and polished project.
           </p>
-          {!authLoading && isOpen && (
+          {!authLoading && voter?.email && (
             <p className="mt-3 text-sm text-text-secondary">
-              Cast one vote for the project you think deserves to win.
+              Voting as{" "}
+              <span className="font-medium text-text-primary">{voter.email}</span>
+              {isOpen
+                ? ". Cast one vote for the project you think deserves to win."
+                : "."}
             </p>
           )}
         </div>
